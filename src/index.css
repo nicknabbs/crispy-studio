@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pancake-bg: #FFF9E6;
+  --color-pancake-dark: #8B6914;
+  --color-pancake-medium: #C89532;
+  --color-pancake-light: #F5C864;
+  --color-pancake-cream: #FFF5E0;
+  --color-pancake-gold: #FFD700;
+  --color-pancake-brown: #4A3728;
+  --color-pancake-warm: #FFFAED;
+  --color-shop-bg: #FFF0DB;
+  --color-shop-border: #E8C992;
+  --font-family-game: 'Fredoka', 'Nunito', system-ui, sans-serif;
+}
+
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/fredoka/v14/X7nP6b87HGqHeL0esQss2g.woff2') format('woff2');
+}
+
+body {
+  margin: 0;
+  background: var(--color-pancake-bg);
+  font-family: var(--font-family-game);
+  overflow: hidden;
+  user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
