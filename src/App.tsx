@@ -13,7 +13,7 @@ import { AdminPanel } from './AdminPanel';
 import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
 import { formatNumber, formatCps } from './gameData';
-import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, playOrderUp, ensureAudioReady, isMuted, setMuted } from './sounds';
+import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const MILESTONES = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12];

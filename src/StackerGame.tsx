@@ -22,7 +22,7 @@ export function StackerGame({ onBack }: StackerGameProps) {
   const [stack, setStack] = useState<StackedPancake[]>([]);
   const [movingX, setMovingX] = useState(0);
   const [movingWidth, setMovingWidth] = useState(BASE_WIDTH);
-  const [direction, setDirection] = useState(1);
+  const [_direction, setDirection] = useState(1);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('pancake-stacker-high');
@@ -150,7 +150,8 @@ export function StackerGame({ onBack }: StackerGameProps) {
   }, [gameState, dropPancake, startGame]);
 
   const visibleStack = stack.slice(-MAX_VISIBLE);
-  const stackOffset = stack.length > MAX_VISIBLE ? (stack.length - MAX_VISIBLE) * PANCAKE_HEIGHT : 0;
+  // Visual offset for tall stacks (available if needed for scroll)
+  // const stackOffset = stack.length > MAX_VISIBLE ? (stack.length - MAX_VISIBLE) * PANCAKE_HEIGHT : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

@@ -42,7 +42,7 @@ export function CatcherGame({ onBack }: CatcherGameProps) {
   const nextIdRef = useRef(0);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
-  const spawnTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const spawnTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const levelRef = useRef(1);
 
   // Measure container width for responsive sizing

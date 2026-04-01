@@ -37,8 +37,8 @@ const TIME_UNITS: { label: string; seconds: number }[] = [
 const MAX_TIME_SECONDS = 100 * 31536000; // 100 years
 
 export function AdminPanel({
-  isOpen, onClose, state, cps, baseCps, clickPower, frenzyMult,
-  setDirectState, addCookies, grantAllAchievements, resetSave, simulateTime,
+  isOpen, onClose, state, cps, baseCps: _baseCps, clickPower, frenzyMult,
+  setDirectState, addCookies: _addCookies, grantAllAchievements, resetSave, simulateTime,
   activateFrenzy, onForceButterPat,
   onSetCpsOverride, onSetClickOverride, cpsOverride, clickOverride,
 }: AdminPanelProps) {

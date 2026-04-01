@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchLeaderboard, submitScore, GAME_CONFIGS, type LeaderboardEntry } from './leaderboard';
+import { fetchLeaderboard, submitScore, GAME_CONFIGS, type LeaderboardEntry } from './leaderboardApi';
 
 interface LeaderboardProps {
   isOpen: boolean;

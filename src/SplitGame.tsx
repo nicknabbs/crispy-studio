@@ -32,7 +32,7 @@ export function SplitGame({ onBack }: SplitGameProps) {
   const [knifePos, setKnifePos] = useState<{ x: number; stage: 'slash' | 'done' } | null>(null);
   const [showResult, setShowResult] = useState(false);
   const pancakeRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Clean up timers on unmount
   useEffect(() => {

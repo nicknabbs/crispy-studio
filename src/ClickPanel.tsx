@@ -1,4 +1,4 @@
-import { CLICK_UPGRADES, formatNumber, formatCps } from './gameData';
+import { CLICK_UPGRADES, formatNumber } from './gameData';
 
 interface ClickPanelProps {
   clickPower: number;
