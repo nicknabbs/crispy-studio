@@ -38,13 +38,59 @@ export async function fetchLeaderboard(gameId: string, limit = 20): Promise<Lead
   return data ?? [];
 }
 
-export async function submitScore(gameId: string, playerName: string, score: number): Promise<boolean> {
+export async function submitScore(gameId: string, playerName: string, score: number): Promise<'ok' | 'not_better' | 'error'> {
+  const trimmedName = playerName.trim().slice(0, 20);
+  const config = GAME_CONFIGS[gameId];
+
+  // Check for existing entry by this player for this game
+  const { data: existing } = await supabase
+    .from('leaderboard')
+    .select('id, score')
+    .eq('game_id', gameId)
+    .eq('player_name', trimmedName)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    const isBetter = config?.lowerIsBetter
+      ? score < existing[0].score
+      : score > existing[0].score;
+
+    if (!isBetter) {
+      return 'not_better';
+    }
+
+    const { error } = await supabase
+      .from('leaderboard')
+      .update({ score })
+      .eq('id', existing[0].id);
+
+    if (error) {
+      console.error('Leaderboard update error:', error);
+      return 'error';
+    }
+    return 'ok';
+  }
+
+  // Insert new entry
   const { error } = await supabase
     .from('leaderboard')
-    .insert({ game_id: gameId, player_name: playerName.trim().slice(0, 20), score });
+    .insert({ game_id: gameId, player_name: trimmedName, score });
 
   if (error) {
     console.error('Leaderboard submit error:', error);
+    return 'error';
+  }
+  return 'ok';
+}
+
+export async function deleteScore(id: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('leaderboard')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Leaderboard delete error:', error);
     return false;
   }
   return true;

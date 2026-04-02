@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchLeaderboard, submitScore, GAME_CONFIGS, type LeaderboardEntry } from './leaderboardApi';
+import { fetchLeaderboard, submitScore, deleteScore, GAME_CONFIGS, type LeaderboardEntry } from './leaderboardApi';
 
 interface LeaderboardProps {
   isOpen: boolean;
@@ -28,6 +28,12 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
   if (!isOpen) return null;
 
   const config = GAME_CONFIGS[activeGame];
+  const myName = localStorage.getItem('pancake-player-name')?.trim().toLowerCase() || '';
+
+  const handleDelete = async (id: number) => {
+    const ok = await deleteScore(id);
+    if (ok) load();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -72,26 +78,41 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              {entries.map((entry, i) => (
-                <div
-                  key={entry.id}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
-                    i === 0 ? 'bg-yellow-100/60' : i === 1 ? 'bg-gray-100/40' : i === 2 ? 'bg-orange-50/40' : ''
-                  }`}
-                >
-                  <div className={`text-sm font-bold w-6 text-center ${
-                    i === 0 ? 'text-yellow-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-orange-400' : 'text-pancake-medium'
-                  }`}>
-                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+              {entries.map((entry, i) => {
+                const isMe = myName && entry.player_name.trim().toLowerCase() === myName;
+                return (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
+                      isMe ? 'ring-2 ring-pancake-gold/50 bg-pancake-gold/10' :
+                      i === 0 ? 'bg-yellow-100/60' : i === 1 ? 'bg-gray-100/40' : i === 2 ? 'bg-orange-50/40' : ''
+                    }`}
+                  >
+                    <div className={`text-sm font-bold w-6 text-center ${
+                      i === 0 ? 'text-yellow-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-orange-400' : 'text-pancake-medium'
+                    }`}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-pancake-brown text-sm truncate">
+                        {entry.player_name}{isMe && <span className="text-pancake-medium text-xs ml-1">(you)</span>}
+                      </div>
+                    </div>
+                    <div className="font-bold text-pancake-gold text-sm">
+                      {config.format(entry.score)}
+                    </div>
+                    {isMe && (
+                      <button
+                        onClick={() => handleDelete(entry.id)}
+                        className="text-red-300 hover:text-red-500 text-xs cursor-pointer bg-transparent border-0 p-0 leading-none"
+                        title="Delete your score"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-pancake-brown text-sm truncate">{entry.player_name}</div>
-                  </div>
-                  <div className="font-bold text-pancake-gold text-sm">
-                    {config.format(entry.score)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -120,6 +141,16 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
   );
 }
 
+const SCORE_KEYS: Record<string, string> = {
+  split: 'pancake-split-best',
+  edge: 'pancake-edge-best',
+  chopper: 'pancake-chopper-high',
+  stacker: 'pancake-stacker-high',
+  flipper: 'pancake-flipper-high',
+  catcher: 'pancake-catcher-high',
+  recipe: 'pancake-recipe-high',
+};
+
 function SubmitModal({ gameId, gameLabel, onClose, onSubmitted }: {
   gameId: string;
   gameLabel: string;
@@ -127,41 +158,30 @@ function SubmitModal({ gameId, gameLabel, onClose, onSubmitted }: {
   onSubmitted: () => void;
 }) {
   const [name, setName] = useState(() => localStorage.getItem('pancake-player-name') || '');
-  const [scoreStr, setScoreStr] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Pre-fill score from localStorage high scores
-  useEffect(() => {
-    const keys: Record<string, string> = {
-      split: 'pancake-split-best',
-      edge: 'pancake-edge-best',
-      chopper: 'pancake-chopper-high',
-      stacker: 'pancake-stacker-high',
-      flipper: 'pancake-flipper-high',
-      catcher: 'pancake-catcher-high',
-      recipe: 'pancake-recipe-high',
-    };
-    const key = keys[gameId];
-    if (key) {
-      const val = localStorage.getItem(key);
-      if (val) setScoreStr(val);
-    }
-  }, [gameId]);
+  // Read score directly from localStorage — not editable
+  const key = SCORE_KEYS[gameId];
+  const rawScore = key ? localStorage.getItem(key) : null;
+  const score = rawScore ? parseFloat(rawScore) : NaN;
+  const hasScore = !isNaN(score);
+  const config = GAME_CONFIGS[gameId];
 
   const handleSubmit = async () => {
     const trimmed = name.trim();
     if (!trimmed) { setError('Enter your name'); return; }
-    const score = parseFloat(scoreStr);
-    if (isNaN(score)) { setError('Enter a valid score'); return; }
+    if (!hasScore) return;
 
     setSubmitting(true);
     setError('');
     localStorage.setItem('pancake-player-name', trimmed);
-    const ok = await submitScore(gameId, trimmed, score);
+    const result = await submitScore(gameId, trimmed, score);
     setSubmitting(false);
-    if (ok) {
+    if (result === 'ok') {
       onSubmitted();
+    } else if (result === 'not_better') {
+      setError('Your score on the board is already better!');
     } else {
       setError('Failed to submit. Try again.');
     }
@@ -184,13 +204,15 @@ function SubmitModal({ gameId, gameLabel, onClose, onSubmitted }: {
         />
 
         <label className="text-xs text-pancake-medium font-bold block mb-1">Your Best Score</label>
-        <input
-          type="text"
-          value={scoreStr}
-          onChange={e => setScoreStr(e.target.value)}
-          placeholder="Score"
-          className="w-full px-3 py-2 rounded-lg border-2 border-pancake-medium bg-white text-pancake-brown text-sm mb-3 outline-none focus:border-pancake-gold"
-        />
+        {hasScore ? (
+          <div className="w-full px-3 py-2 rounded-lg border-2 border-pancake-medium/50 bg-pancake-warm text-pancake-brown text-sm mb-3 font-bold">
+            {config.format(score)}
+          </div>
+        ) : (
+          <div className="w-full px-3 py-2 rounded-lg border-2 border-red-200 bg-red-50 text-red-400 text-xs mb-3">
+            No score yet — play this game first!
+          </div>
+        )}
 
         {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
 
@@ -203,7 +225,7 @@ function SubmitModal({ gameId, gameLabel, onClose, onSubmitted }: {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !hasScore}
             className="flex-1 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-sm font-bold cursor-pointer border-0 disabled:opacity-50"
           >
             {submitting ? '...' : 'Submit'}
