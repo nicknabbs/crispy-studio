@@ -12,6 +12,7 @@ import { StatsPanel } from './StatsPanel';
 import { AdminPanel } from './AdminPanel';
 import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
+import { Leaderboard } from './Leaderboard';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -35,6 +36,7 @@ function App() {
   const [mapleShopOpen, setMapleShopOpen] = useState(false);
   const [forceButterSpawn, setForceButterSpawn] = useState(0);
   const [miniGamesOpen, setMiniGamesOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [shaking, setShaking] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
@@ -250,6 +252,13 @@ function App() {
               </button>
             )}
             <button
+              onClick={() => setLeaderboardOpen(true)}
+              className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
+              title="Leaderboard"
+            >
+              🏆
+            </button>
+            <button
               onClick={() => setAdminOpen(true)}
               className="text-lg cursor-pointer bg-transparent border-0 opacity-40 hover:opacity-100 transition-opacity"
               title="Admin Panel"
@@ -344,6 +353,11 @@ function App() {
       <MiniGames
         isOpen={miniGamesOpen}
         onClose={() => setMiniGamesOpen(false)}
+      />
+
+      <Leaderboard
+        isOpen={leaderboardOpen}
+        onClose={() => setLeaderboardOpen(false)}
       />
 
       <MapleShop

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SplitGame } from './SplitGame';
 import { EdgeSlicerGame } from './EdgeSlicerGame';
 import { StackerGame } from './StackerGame';
@@ -7,6 +7,7 @@ import { CatcherGame } from './CatcherGame';
 import { RecipeGame } from './RecipeGame';
 import { ChopperGame } from './ChopperGame';
 import { Leaderboard } from './Leaderboard';
+import { autoSubmitScore } from './autoSubmitScore';
 
 interface MiniGamesProps {
   isOpen: boolean;
@@ -63,16 +64,75 @@ const GAMES = [
 export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   const [activeGame, setActiveGame] = useState<ActiveGame>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [namePrompt, setNamePrompt] = useState<{ gameId: string; score: number } | null>(null);
+  const [nameInput, setNameInput] = useState('');
+
+  const handleScore = useCallback((gameId: string, score: number) => {
+    const existingName = localStorage.getItem('pancake-player-name')?.trim();
+    if (existingName) {
+      autoSubmitScore(gameId, score);
+    } else {
+      setNamePrompt({ gameId, score });
+      setNameInput('');
+    }
+  }, []);
+
+  const handleNameSubmit = () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed || !namePrompt) return;
+    localStorage.setItem('pancake-player-name', trimmed.slice(0, 20));
+    autoSubmitScore(namePrompt.gameId, namePrompt.score);
+    setNamePrompt(null);
+  };
 
   if (!isOpen) return null;
 
-  if (activeGame === 'split') return <SplitGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'edge') return <EdgeSlicerGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'chopper') return <ChopperGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'stacker') return <StackerGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'flipper') return <FlipperGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'catcher') return <CatcherGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'recipe') return <RecipeGame onBack={() => setActiveGame(null)} />;
+  const goBack = () => setActiveGame(null);
+
+  if (activeGame === 'split') return <><SplitGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'edge') return <><EdgeSlicerGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'chopper') return <><ChopperGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'stacker') return <><StackerGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'flipper') return <><FlipperGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'catcher') return <><CatcherGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'recipe') return <><RecipeGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+
+  function NameModal() {
+    if (!namePrompt) return null;
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-pancake-cream rounded-xl shadow-xl p-5 w-72">
+          <h3 className="font-bold text-pancake-brown text-lg mb-1">New High Score!</h3>
+          <p className="text-xs text-pancake-medium mb-3">Enter your name for the leaderboard</p>
+          <input
+            type="text"
+            value={nameInput}
+            onChange={e => setNameInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleNameSubmit()}
+            maxLength={20}
+            placeholder="Your name..."
+            autoFocus
+            className="w-full px-3 py-2 rounded-lg border-2 border-pancake-medium bg-white text-pancake-brown text-sm mb-3 outline-none focus:border-pancake-gold"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setNamePrompt(null)}
+              className="flex-1 py-2 rounded-lg border-2 border-shop-border bg-pancake-warm text-pancake-brown text-sm font-bold cursor-pointer"
+            >
+              Skip
+            </button>
+            <button
+              onClick={handleNameSubmit}
+              disabled={!nameInput.trim()}
+              className="flex-1 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-sm font-bold cursor-pointer border-0 disabled:opacity-50"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -97,7 +157,7 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
             <span className="text-4xl flex-shrink-0">🏆</span>
             <div>
               <div className="font-bold text-pancake-brown">Leaderboard</div>
-              <div className="text-xs text-pancake-medium mt-0.5">See top scores and submit yours!</div>
+              <div className="text-xs text-pancake-medium mt-0.5">See top scores across all games</div>
             </div>
           </button>
 

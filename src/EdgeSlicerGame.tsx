@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface EdgeSlicerGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 interface Round {
@@ -20,7 +21,7 @@ function randomPancake() {
   };
 }
 
-export function EdgeSlicerGame({ onBack }: EdgeSlicerGameProps) {
+export function EdgeSlicerGame({ onBack, onScore }: EdgeSlicerGameProps) {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [bestEdge, setBestEdge] = useState(() => {
     const saved = localStorage.getItem('pancake-edge-best');
@@ -61,6 +62,7 @@ export function EdgeSlicerGame({ onBack }: EdgeSlicerGameProps) {
     if (edgeScore < bestEdge) {
       setBestEdge(edgeScore);
       localStorage.setItem('pancake-edge-best', String(edgeScore));
+      onScore?.('edge', edgeScore);
     }
 
     timerRef.current = setTimeout(() => {
@@ -143,6 +145,14 @@ export function EdgeSlicerGame({ onBack }: EdgeSlicerGameProps) {
                 backgroundSize: '18px 16px',
                 backgroundPosition: '0 0, 9px 8px',
               }} />
+
+              {/* Admin hack: edge guide lines */}
+              {localStorage.getItem('pancake-hack-edge-guide') === 'true' && !showResult && (
+                <>
+                  <div className="absolute top-0 bottom-0 left-[2%] w-0.5 bg-red-400/70 z-10" style={{ boxShadow: '0 0 6px rgba(248,113,113,0.5)' }} />
+                  <div className="absolute top-0 bottom-0 right-[2%] w-0.5 bg-red-400/70 z-10" style={{ boxShadow: '0 0 6px rgba(248,113,113,0.5)' }} />
+                </>
+              )}
 
               {/* Split percentages */}
               {showResult && cutResult && (

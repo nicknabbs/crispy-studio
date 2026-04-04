@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface CatcherGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 interface Drop {
@@ -18,7 +19,9 @@ const PAN_W = 60;
 const PAN_Y = GAME_H - 40;
 const DROP_SIZE = 24;
 
-export function CatcherGame({ onBack }: CatcherGameProps) {
+export function CatcherGame({ onBack, onScore }: CatcherGameProps) {
+  const bigPanHack = localStorage.getItem('pancake-hack-catcher-bigpan') === 'true';
+  const panW = bigPanHack ? PAN_W * 2 : PAN_W;
   const [gameW, setGameW] = useState(GAME_W_MAX);
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'over'>('ready');
   const [panX, setPanX] = useState(gameW / 2 - PAN_W / 2);
@@ -85,8 +88,9 @@ export function CatcherGame({ onBack }: CatcherGameProps) {
     const handleMove = (clientX: number) => {
       if (!gameAreaRef.current) return;
       const rect = gameAreaRef.current.getBoundingClientRect();
-      const x = clientX - rect.left - PAN_W / 2;
-      const clamped = Math.max(0, Math.min(gameWRef.current - PAN_W, x));
+      const pw = localStorage.getItem('pancake-hack-catcher-bigpan') === 'true' ? PAN_W * 2 : PAN_W;
+      const x = clientX - rect.left - pw / 2;
+      const clamped = Math.max(0, Math.min(gameWRef.current - pw, x));
       panXRef.current = clamped;
       setPanX(clamped);
     };
@@ -147,7 +151,8 @@ export function CatcherGame({ onBack }: CatcherGameProps) {
         // Check catch — is it at pan level?
         const dropCenterX = (d.x / 100) * gameWRef.current;
         const panLeft = panXRef.current;
-        const panRight = panXRef.current + PAN_W;
+        const pw = localStorage.getItem('pancake-hack-catcher-bigpan') === 'true' ? PAN_W * 2 : PAN_W;
+        const panRight = panXRef.current + pw;
 
         if (newY >= PAN_Y - DROP_SIZE && newY <= PAN_Y && !d.caught) {
           if (dropCenterX >= panLeft - 5 && dropCenterX <= panRight + 5) {
@@ -212,6 +217,7 @@ export function CatcherGame({ onBack }: CatcherGameProps) {
         if (scoreRef.current > highScore) {
           setHighScore(scoreRef.current);
           localStorage.setItem('pancake-catcher-high', String(scoreRef.current));
+          onScore?.('catcher', scoreRef.current);
         }
         setGameState('over');
         return;
@@ -263,7 +269,7 @@ export function CatcherGame({ onBack }: CatcherGameProps) {
           {/* Catch feedback */}
           {lastCatch && gameState === 'playing' && (
             <div className={`absolute z-20 font-bold text-sm ${lastCatch.color} pointer-events-none`}
-              style={{ left: panXRef.current + PAN_W / 2 - 30, top: PAN_Y - 30, width: 60, textAlign: 'center' }}>
+              style={{ left: panXRef.current + panW / 2 - 30, top: PAN_Y - 30, width: 60, textAlign: 'center' }}>
               {lastCatch.text}
             </div>
           )}
@@ -289,7 +295,7 @@ export function CatcherGame({ onBack }: CatcherGameProps) {
           {gameState === 'playing' && (
             <div
               className="absolute"
-              style={{ left: panX, top: PAN_Y, width: PAN_W, textAlign: 'center', fontSize: 32 }}
+              style={{ left: panX, top: PAN_Y, width: panW, textAlign: 'center', fontSize: bigPanHack ? 48 : 32 }}
             >
               🍳
             </div>

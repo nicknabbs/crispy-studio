@@ -38,6 +38,36 @@ export async function fetchLeaderboard(gameId: string, limit = 20): Promise<Lead
   return data ?? [];
 }
 
+export async function fetchLeaderboardPage(
+  gameId: string,
+  page: number,
+  pageSize = 20,
+): Promise<{ entries: LeaderboardEntry[]; total: number }> {
+  const config = GAME_CONFIGS[gameId];
+  const ascending = config?.lowerIsBetter ?? false;
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  const { count } = await supabase
+    .from('leaderboard')
+    .select('*', { count: 'exact', head: true })
+    .eq('game_id', gameId);
+
+  const { data, error } = await supabase
+    .from('leaderboard')
+    .select('*')
+    .eq('game_id', gameId)
+    .order('score', { ascending })
+    .order('created_at', { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    console.error('Leaderboard page fetch error:', error);
+    return { entries: [], total: 0 };
+  }
+  return { entries: data ?? [], total: count ?? 0 };
+}
+
 export async function submitScore(gameId: string, playerName: string, score: number): Promise<'ok' | 'not_better' | 'error'> {
   const trimmedName = playerName.trim().slice(0, 20);
   const config = GAME_CONFIGS[gameId];

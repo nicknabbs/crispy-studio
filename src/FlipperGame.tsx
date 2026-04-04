@@ -2,13 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface FlipperGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 const PERFECT_ZONE = 0.08; // 8% window for "perfect"
 const GREAT_ZONE = 0.16;
 const GOOD_ZONE = 0.28;
 
-export function FlipperGame({ onBack }: FlipperGameProps) {
+export function FlipperGame({ onBack, onScore }: FlipperGameProps) {
   const [gameState, setGameState] = useState<'ready' | 'cooking' | 'result' | 'over'>('ready');
   const [progress, setProgress] = useState(0); // 0 to 1
   const [speed, setSpeed] = useState(0.008);
@@ -77,6 +78,7 @@ export function FlipperGame({ onBack }: FlipperGameProps) {
         if (score > highScore) {
           setHighScore(score);
           localStorage.setItem('pancake-flipper-high', String(score));
+          onScore?.('flipper', score);
         }
       }, 1000);
       return () => clearTimeout(timer);
@@ -101,6 +103,7 @@ export function FlipperGame({ onBack }: FlipperGameProps) {
 
     const p = progressRef.current;
     const dist = Math.abs(p - sweetSpot);
+    const zoneMult = localStorage.getItem('pancake-hack-flipper-zone') === 'true' ? 3 : 1;
 
     let rating: string;
     let points: number;
@@ -110,7 +113,7 @@ export function FlipperGame({ onBack }: FlipperGameProps) {
       points = 0;
       setLives(prev => prev - 1);
       setStreak(0);
-    } else if (dist <= PERFECT_ZONE) {
+    } else if (dist <= PERFECT_ZONE * zoneMult) {
       rating = 'PERFECT!';
       points = 100 + streak * 20;
       setStreak(prev => {
@@ -118,7 +121,7 @@ export function FlipperGame({ onBack }: FlipperGameProps) {
         setBestStreak(bs => Math.max(bs, next));
         return next;
       });
-    } else if (dist <= GREAT_ZONE) {
+    } else if (dist <= GREAT_ZONE * zoneMult) {
       rating = 'Great!';
       points = 60 + streak * 10;
       setStreak(prev => {
@@ -126,11 +129,11 @@ export function FlipperGame({ onBack }: FlipperGameProps) {
         setBestStreak(bs => Math.max(bs, next));
         return next;
       });
-    } else if (dist <= GOOD_ZONE) {
+    } else if (dist <= GOOD_ZONE * zoneMult) {
       rating = 'Good';
       points = 30;
       setStreak(0);
-    } else if (p > sweetSpot + GOOD_ZONE) {
+    } else if (p > sweetSpot + GOOD_ZONE * zoneMult) {
       rating = 'Overcooked!';
       points = 0;
       setLives(prev => prev - 1);

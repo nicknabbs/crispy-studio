@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface StackerGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 interface StackedPancake {
@@ -17,7 +18,7 @@ const SPEED_INCREMENT = 0.15;
 const MAX_VISIBLE = 14;
 const TOLERANCE = 2; // pixels of overhang allowed before trimming
 
-export function StackerGame({ onBack }: StackerGameProps) {
+export function StackerGame({ onBack, onScore }: StackerGameProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'over'>('ready');
   const [stack, setStack] = useState<StackedPancake[]>([]);
   const [movingX, setMovingX] = useState(0);
@@ -57,8 +58,10 @@ export function StackerGame({ onBack }: StackerGameProps) {
   useEffect(() => {
     if (gameState !== 'playing') return;
 
+    const slowHack = localStorage.getItem('pancake-hack-stacker-slow') === 'true';
     const animate = () => {
-      xRef.current += speedRef.current * dirRef.current;
+      const speedMult = slowHack ? 0.33 : 1;
+      xRef.current += speedRef.current * dirRef.current * speedMult;
       if (xRef.current > GAME_WIDTH - widthRef.current) {
         xRef.current = GAME_WIDTH - widthRef.current;
         dirRef.current = -1;
@@ -100,6 +103,7 @@ export function StackerGame({ onBack }: StackerGameProps) {
       if (finalScore > highScore) {
         setHighScore(finalScore);
         localStorage.setItem('pancake-stacker-high', String(finalScore));
+        onScore?.('stacker', finalScore);
       }
       return;
     }
@@ -132,6 +136,7 @@ export function StackerGame({ onBack }: StackerGameProps) {
       if (newScore > highScore) {
         setHighScore(newScore);
         localStorage.setItem('pancake-stacker-high', String(newScore));
+        onScore?.('stacker', newScore);
       }
     }
   }, [gameState, highScore]);

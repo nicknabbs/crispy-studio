@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface SplitGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 interface Round {
@@ -21,7 +22,7 @@ function randomPancake() {
   };
 }
 
-export function SplitGame({ onBack }: SplitGameProps) {
+export function SplitGame({ onBack, onScore }: SplitGameProps) {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [bestAccuracy, setBestAccuracy] = useState(() => {
     const saved = localStorage.getItem('pancake-split-best');
@@ -65,6 +66,7 @@ export function SplitGame({ onBack }: SplitGameProps) {
     if (accuracy > bestAccuracy) {
       setBestAccuracy(accuracy);
       localStorage.setItem('pancake-split-best', String(accuracy));
+      onScore?.('split', accuracy);
     }
 
     // Clear everything and serve a new pancake
@@ -143,6 +145,11 @@ export function SplitGame({ onBack }: SplitGameProps) {
                 backgroundSize: '18px 16px',
                 backgroundPosition: '0 0, 9px 8px',
               }} />
+
+              {/* Admin hack: guide line at 50% */}
+              {localStorage.getItem('pancake-hack-split-guide') === 'true' && !showResult && (
+                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-green-400/70 z-10" style={{ boxShadow: '0 0 6px rgba(74,222,128,0.5)' }} />
+              )}
 
               {/* Split percentages (fade in after knife) */}
               {showResult && cutResult && (

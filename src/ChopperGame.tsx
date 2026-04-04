@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface ChopperGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 interface Knife {
@@ -14,10 +15,10 @@ const GAME_DURATION = 5; // seconds to chop
 const PANCAKE_RADIUS = 100; // px
 const KNIFE_LENGTH = 50;
 
-export function ChopperGame({ onBack }: ChopperGameProps) {
+export function ChopperGame({ onBack, onScore }: ChopperGameProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'result'>('ready');
   const [knives, setKnives] = useState<Knife[]>([]);
-  const [flyingKnife, setFlyingKnife] = useState<{ id: number; angle: number } | null>(null);
+  const [flyingKnives, setFlyingKnives] = useState<{ id: number; angle: number }[]>([]);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const [pieces, setPieces] = useState(0);
   const [highScore, setHighScore] = useState(() => {
@@ -32,7 +33,7 @@ export function ChopperGame({ onBack }: ChopperGameProps) {
   const startGame = useCallback(() => {
     setKnives([]);
     knivesRef.current = [];
-    setFlyingKnife(null);
+    setFlyingKnives([]);
     setTimeLeft(GAME_DURATION);
     setPieces(0);
     nextIdRef.current = 0;
@@ -52,6 +53,7 @@ export function ChopperGame({ onBack }: ChopperGameProps) {
           if (p > highScore) {
             setHighScore(p);
             localStorage.setItem('pancake-chopper-high', String(p));
+            onScore?.('chopper', p);
           }
           setGameState('result');
           return 0;
@@ -73,16 +75,24 @@ export function ChopperGame({ onBack }: ChopperGameProps) {
     const id = nextIdRef.current++;
 
     // Show flying knife animation
-    setFlyingKnife({ id, angle });
+    setFlyingKnives(prev => [...prev, { id, angle }]);
 
     // After brief flight, land it
     setTimeout(() => {
       const knife: Knife = { id, angle, landed: true };
       knivesRef.current = [...knivesRef.current, knife];
       setKnives([...knivesRef.current]);
-      setFlyingKnife(null);
+      setFlyingKnives(prev => prev.filter(k => k.id !== id));
     }, 80);
   }, [gameState]);
+
+  // Admin hack: auto-chop
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+    if (localStorage.getItem('pancake-hack-chopper-auto') !== 'true') return;
+    const id = setInterval(() => chop(), 100);
+    return () => clearInterval(id);
+  }, [gameState, chop]);
 
   // Keyboard support
   useEffect(() => {
@@ -149,7 +159,15 @@ export function ChopperGame({ onBack }: ChopperGameProps) {
         {/* Game area */}
         <div
           className="relative flex items-center justify-center select-none"
-          style={{ height: 340, background: 'linear-gradient(180deg, #FFF9E6 0%, #FFF0DB 100%)' }}
+          style={{ height: 340, background: 'linear-gradient(180deg, #FFF9E6 0%, #FFF0DB 100%)', touchAction: 'none' }}
+          onTouchStart={(e: React.TouchEvent) => {
+            e.preventDefault();
+            if (gameState === 'playing') {
+              for (let i = 0; i < e.changedTouches.length; i++) chop();
+            } else if (gameState === 'ready' || gameState === 'result') {
+              startGame();
+            }
+          }}
           onClick={() => {
             if (gameState === 'playing') chop();
             else if (gameState === 'ready' || gameState === 'result') startGame();
@@ -214,8 +232,9 @@ export function ChopperGame({ onBack }: ChopperGameProps) {
             })}
 
             {/* Flying knife animation */}
-            {flyingKnife && (
+            {flyingKnives.map(fk => (
               <div
+                key={fk.id}
                 className="absolute pointer-events-none"
                 style={{
                   left: PANCAKE_RADIUS,
@@ -227,7 +246,7 @@ export function ChopperGame({ onBack }: ChopperGameProps) {
               >
                 🔪
               </div>
-            )}
+            ))}
 
             {/* Piece count in center during play */}
             {gameState === 'playing' && knives.length > 0 && (

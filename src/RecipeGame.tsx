@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface RecipeGameProps {
   onBack: () => void;
+  onScore?: (gameId: string, score: number) => void;
 }
 
 interface Ingredient {
@@ -46,7 +47,7 @@ const BAD_ITEMS = [
 
 const GAME_DURATION = 30; // seconds
 
-export function RecipeGame({ onBack }: RecipeGameProps) {
+export function RecipeGame({ onBack, onScore }: RecipeGameProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'over'>('ready');
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [score, setScore] = useState(0);
@@ -90,6 +91,7 @@ export function RecipeGame({ onBack }: RecipeGameProps) {
           if (scoreRef.current > highScore) {
             setHighScore(scoreRef.current);
             localStorage.setItem('pancake-recipe-high', String(scoreRef.current));
+            onScore?.('recipe', scoreRef.current);
           }
           return 0;
         }
@@ -106,7 +108,8 @@ export function RecipeGame({ onBack }: RecipeGameProps) {
     const spawn = () => {
       // 70% good — good ones get tapped fast so they leave the screen,
       // bad ones linger since you avoid them, so this feels balanced
-      const isGood = Math.random() < 0.7;
+      const safeHack = localStorage.getItem('pancake-hack-recipe-safe') === 'true';
+      const isGood = safeHack || Math.random() < 0.7;
       const pool = isGood ? GOOD_ITEMS : BAD_ITEMS;
       const item = pool[Math.floor(Math.random() * pool.length)];
 

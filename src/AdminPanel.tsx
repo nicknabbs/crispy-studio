@@ -67,6 +67,9 @@ export function AdminPanel({
   // Reset confirmation
   const [confirmReset, setConfirmReset] = useState(false);
 
+  // Force re-render for hack toggles
+  const [, setTick] = useState(0);
+
   if (!isOpen) return null;
 
   const handleLogin = () => {
@@ -74,6 +77,7 @@ export function AdminPanel({
       setAuthenticated(true);
       setPasswordError(false);
       setPasswordInput('');
+      localStorage.setItem('pancake-admin-unlocked', 'true');
     } else {
       setPasswordError(true);
     }
@@ -422,7 +426,45 @@ export function AdminPanel({
             </button>
           </Section>
 
-          {/* Section 8: Danger Zone */}
+          {/* Section 8: Mini Game Hacks */}
+          <Section title="🎮 Mini Game Hacks" subtitle="Toggle cheats for each mini game">
+            <div className="flex flex-col gap-2">
+              {[
+                { key: 'pancake-hack-split-guide', label: '✂️ Split the Pancake', desc: 'Show guide line at 50%' },
+                { key: 'pancake-hack-edge-guide', label: '🗡️ Edge Slicer', desc: 'Show guide lines near edges' },
+                { key: 'pancake-hack-chopper-auto', label: '🪓 Pancake Chopper', desc: 'Auto-chop mode (rapid fire)' },
+                { key: 'pancake-hack-stacker-slow', label: '🥞 Pancake Stacker', desc: 'Slow motion (3x slower)' },
+                { key: 'pancake-hack-flipper-zone', label: '🍳 Pancake Flipper', desc: 'Extended golden zone (3x wider)' },
+                { key: 'pancake-hack-catcher-bigpan', label: '🥛 Batter Catcher', desc: 'Huge pan (2x wider)' },
+                { key: 'pancake-hack-recipe-safe', label: '🥣 Recipe Rush', desc: 'Hide bad ingredients' },
+              ].map(hack => {
+                const active = localStorage.getItem(hack.key) === 'true';
+                return (
+                  <div key={hack.key} className="flex items-center justify-between gap-2 py-1">
+                    <div>
+                      <div className="text-sm font-bold text-pancake-brown">{hack.label}</div>
+                      <div className="text-xs text-pancake-medium">{hack.desc}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem(hack.key, active ? 'false' : 'true');
+                        setTick(t => t + 1);
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer border-2 transition-all min-w-[50px] ${
+                        active
+                          ? 'border-green-400 bg-green-100 text-green-700'
+                          : 'border-shop-border bg-pancake-cream text-pancake-medium'
+                      }`}
+                    >
+                      {active ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+
+          {/* Section 9: Danger Zone */}
           <Section title="🗑️ Danger Zone" danger>
             {!confirmReset ? (
               <button
