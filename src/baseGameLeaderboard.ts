@@ -1,27 +1,21 @@
 import { submitScore } from './leaderboardApi';
 
-// Persisted highs per stat — we only push to Supabase when the current value
-// beats the stored high, so the write rate stays low even at 60fps.
-const ENTRIES = [
-  { gameId: 'base_pancakes', storageKey: 'pancake-peak-pancakes-high' },
-  { gameId: 'base_pps',      storageKey: 'pancake-pps-high' },
-  { gameId: 'base_click',    storageKey: 'pancake-click-power-high' },
-] as const;
-
-type StatKey = typeof ENTRIES[number]['gameId'];
+// Game IDs we track for the base clicker. submitScore() on the server
+// already compares against the existing row and no-ops if not better,
+// so we don't keep a local "last submitted" cache — a failed submit
+// (e.g. DB schema mismatch) would poison that cache and we'd never retry.
+// The server is the source of truth.
+const STAT_IDS = ['base_pancakes', 'base_pps', 'base_click'] as const;
+type StatKey = typeof STAT_IDS[number];
 
 export function submitBaseGameScoresIfBetter(values: Record<StatKey, number>): void {
   const name = localStorage.getItem('pancake-player-name')?.trim();
   if (!name) return;
-  for (const { gameId, storageKey } of ENTRIES) {
+  for (const gameId of STAT_IDS) {
     const current = values[gameId];
     if (!Number.isFinite(current) || current <= 0) continue;
-    const stored = parseFloat(localStorage.getItem(storageKey) || '0');
-    if (current > stored) {
-      localStorage.setItem(storageKey, String(current));
-      submitScore(gameId, name, current).catch(err => {
-        console.warn(`Base-game submit failed for ${gameId}:`, err);
-      });
-    }
+    submitScore(gameId, name, current).catch(err => {
+      console.warn(`Base-game submit failed for ${gameId}:`, err);
+    });
   }
 }
