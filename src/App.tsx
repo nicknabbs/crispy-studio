@@ -12,6 +12,7 @@ import { StatsPanel } from './StatsPanel';
 import { AdminPanel } from './AdminPanel';
 import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
+import { MiniGameHacks } from './MiniGameHacks';
 import { Leaderboard } from './Leaderboard';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
@@ -33,6 +34,7 @@ function App() {
   } = useGameState();
   const [showWelcome, setShowWelcome] = useState(offlineCookies > 0);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [miniGameHacksOpen, setMiniGameHacksOpen] = useState(false);
   const [mapleShopOpen, setMapleShopOpen] = useState(false);
   const [forceButterSpawn, setForceButterSpawn] = useState(0);
   const [miniGamesOpen, setMiniGamesOpen] = useState(false);
@@ -231,14 +233,24 @@ function App() {
             <div className="absolute bottom-10 right-10 text-6xl">🥞</div>
           </div>
 
-          {/* Mini games button (top left) */}
-          <button
-            onClick={() => setMiniGamesOpen(true)}
-            className="absolute top-2 left-2 text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity z-10"
-            title="Mini Games"
-          >
-            🎮
-          </button>
+          {/* Mini games + hacks buttons (top left) */}
+          <div className="absolute top-2 left-2 flex gap-1 z-10">
+            <button
+              onClick={() => setMiniGamesOpen(true)}
+              className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
+              title="Mini Games"
+            >
+              🎮
+            </button>
+            <button
+              onClick={() => setMiniGameHacksOpen(true)}
+              className="glitch-btn text-lg cursor-pointer bg-transparent border-0 opacity-60 hover:opacity-100 transition-opacity"
+              title="Mini Game Hacks"
+              data-text="🎮"
+            >
+              🎮
+            </button>
+          </div>
 
           {/* Top-right buttons */}
           <div className="absolute top-2 right-2 flex gap-1 z-10">
@@ -353,6 +365,11 @@ function App() {
       <MiniGames
         isOpen={miniGamesOpen}
         onClose={() => setMiniGamesOpen(false)}
+      />
+
+      <MiniGameHacks
+        isOpen={miniGameHacksOpen}
+        onClose={() => setMiniGameHacksOpen(false)}
       />
 
       <Leaderboard
