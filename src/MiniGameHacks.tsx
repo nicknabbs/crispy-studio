@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { GAME_CONFIGS, adminSetScore } from './leaderboardApi';
+import { formatNumber } from './gameData';
+
+const MAX_EDITABLE_SCORE = 999e39; // 999 duodecillion
 
 interface MiniGameHacksProps {
   isOpen: boolean;
@@ -31,7 +34,7 @@ const HACKS: { key: string; label: string; desc: string }[] = [
   { key: 'pancake-hack-toss-easy',      label: '🥞 Pancake Toss & Catch',    desc: 'Huge catch window + slow gravity' },
   { key: 'pancake-hack-pour-slow',      label: '🫗 Batter Pour Precision',   desc: 'Slow pour for perfect precision' },
   { key: 'pancake-hack-maze-freeze',    label: '🌀 Pancake Maze Roll',       desc: 'Freeze timer (unlimited time)' },
-  { key: 'pancake-hack-memory-slow',    label: '🧠 Short Stack Memory',      desc: 'Pattern flashes 2x slower' },
+  { key: 'pancake-hack-memory-timer',   label: '🧠 Short Stack Memory',      desc: '30s timer — spam buttons to rack up points' },
   { key: 'pancake-hack-grid-ghost',     label: '🔲 Griddle Grid Puzzle',     desc: 'Slow drop speed' },
   { key: 'pancake-hack-blast-snap',     label: '🧱 Pancake Blast',           desc: 'Much bigger snap radius' },
 ];
@@ -248,8 +251,11 @@ export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
                   value={newScoreInput}
                   onChange={e => { setNewScoreInput(e.target.value); setScoreEditorMsg(null); }}
                   placeholder={String(currentHigh)}
+                  max={MAX_EDITABLE_SCORE}
+                  step="any"
                   className="w-full px-3 py-2 rounded-lg border-2 border-pancake-medium bg-white text-pancake-brown font-medium outline-none focus:border-pancake-gold"
                 />
+                <p className="text-xs text-pancake-medium mt-1">Max: 999 DDc (duodecillion)</p>
               </div>
 
               <button
@@ -258,6 +264,10 @@ export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
                   const parsed = parseFloat(newScoreInput);
                   if (!Number.isFinite(parsed) || parsed < 0) {
                     setScoreEditorMsg({ kind: 'err', text: 'Enter a valid non-negative number.' });
+                    return;
+                  }
+                  if (parsed > MAX_EDITABLE_SCORE) {
+                    setScoreEditorMsg({ kind: 'err', text: `Max score is 999 duodecillion (${formatNumber(MAX_EDITABLE_SCORE)}).` });
                     return;
                   }
                   setScoreEditorBusy(true);
