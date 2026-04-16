@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { formatNumber } from './gameData';
 
 export interface LeaderboardEntry {
   id: number;
@@ -10,6 +11,11 @@ export interface LeaderboardEntry {
 
 // Game configs: whether lower score is better, and how to format
 export const GAME_CONFIGS: Record<string, { lowerIsBetter: boolean; label: string; format: (s: number) => string }> = {
+  // Base clicker game leaderboards first — these are the "main" game stats
+  base_pancakes: { lowerIsBetter: false, label: '🥞 Most Pancakes Ever',  format: s => formatNumber(s) },
+  base_pps:      { lowerIsBetter: false, label: '⚡ Pancakes per Second', format: s => `${formatNumber(s)}/s` },
+  base_click:    { lowerIsBetter: false, label: '👆 Pancakes per Click',  format: s => formatNumber(s) },
+  // Mini games
   split:   { lowerIsBetter: false, label: 'Split the Pancake',       format: s => `${s}%` },
   edge:    { lowerIsBetter: true,  label: 'Edge Slicer',             format: s => `${s}%` },
   chopper: { lowerIsBetter: false, label: 'Pancake Chopper',         format: s => `${s} cuts` },

@@ -18,6 +18,8 @@ export interface GameState {
   goldenCookiesCaught: number;
   unlockedAchievements: Record<string, boolean>;
   lastSaveTime: number;
+  // Sticky max of cookies ever held — survives spending and prestige
+  peakCookies: number;
 }
 
 const SAVE_KEY = 'pancake-stack-save';
@@ -53,6 +55,7 @@ function defaultState(): GameState {
     goldenCookiesCaught: 0,
     unlockedAchievements: {},
     lastSaveTime: Date.now(),
+    peakCookies: 0,
   };
 }
 
@@ -124,6 +127,7 @@ function loadState(): { state: GameState; offlineCookies: number } {
     saved.cookies += offlineCookies;
     saved.totalBaked += offlineCookies;
     saved.lifetimeBaked += offlineCookies;
+    if (saved.cookies > saved.peakCookies) saved.peakCookies = saved.cookies;
     saved.lastSaveTime = Date.now();
     return { state: saved, offlineCookies };
   } catch {
@@ -188,11 +192,13 @@ export function useGameState() {
           ? cpsOverrideRef.current * dt
           : calcCps(prev) * frenzyMultRef.current * dt;
         if (earned === 0) return prev;
+        const nextCookies = prev.cookies + earned;
         return {
           ...prev,
-          cookies: prev.cookies + earned,
+          cookies: nextCookies,
           totalBaked: prev.totalBaked + earned,
           lifetimeBaked: prev.lifetimeBaked + earned,
+          peakCookies: nextCookies > prev.peakCookies ? nextCookies : prev.peakCookies,
         };
       });
       frameId = requestAnimationFrame(tick);
@@ -216,12 +222,14 @@ export function useGameState() {
   const clickCookie = useCallback(() => {
     setState(prev => {
       const power = clickOverride !== null ? clickOverride : getClickPower(prev, calcCps(prev));
+      const nextCookies = prev.cookies + power;
       return {
         ...prev,
-        cookies: prev.cookies + power,
+        cookies: nextCookies,
         totalBaked: prev.totalBaked + power,
         lifetimeBaked: prev.lifetimeBaked + power,
         totalClicks: prev.totalClicks + 1,
+        peakCookies: nextCookies > prev.peakCookies ? nextCookies : prev.peakCookies,
       };
     });
   }, [clickOverride]);
@@ -291,6 +299,7 @@ export function useGameState() {
         purchasedPrestigeUpgrades: prev.purchasedPrestigeUpgrades,
         goldenCookiesCaught: prev.goldenCookiesCaught,
         unlockedAchievements: prev.unlockedAchievements,
+        peakCookies: prev.peakCookies,
         lastSaveTime: Date.now(),
       };
     });
@@ -312,12 +321,16 @@ export function useGameState() {
   }, []);
 
   const addCookies = useCallback((amount: number) => {
-    setState(prev => ({
-      ...prev,
-      cookies: prev.cookies + amount,
-      totalBaked: prev.totalBaked + amount,
-      lifetimeBaked: prev.lifetimeBaked + amount,
-    }));
+    setState(prev => {
+      const nextCookies = prev.cookies + amount;
+      return {
+        ...prev,
+        cookies: nextCookies,
+        totalBaked: prev.totalBaked + amount,
+        lifetimeBaked: prev.lifetimeBaked + amount,
+        peakCookies: nextCookies > prev.peakCookies ? nextCookies : prev.peakCookies,
+      };
+    });
   }, []);
 
   const incrementGoldenCaught = useCallback(() => {
@@ -392,11 +405,13 @@ export function useGameState() {
   const simulateTime = useCallback((seconds: number) => {
     setState(prev => {
       const earned = calcCps(prev) * frenzyMultRef.current * seconds;
+      const nextCookies = prev.cookies + earned;
       return {
         ...prev,
-        cookies: prev.cookies + earned,
+        cookies: nextCookies,
         totalBaked: prev.totalBaked + earned,
         lifetimeBaked: prev.lifetimeBaked + earned,
+        peakCookies: nextCookies > prev.peakCookies ? nextCookies : prev.peakCookies,
       };
     });
   }, []);

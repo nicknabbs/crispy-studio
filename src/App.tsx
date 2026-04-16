@@ -16,6 +16,7 @@ import { MiniGameHacks } from './MiniGameHacks';
 import { Leaderboard } from './Leaderboard';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
+import { submitBaseGameScoresIfBetter } from './baseGameLeaderboard';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const MILESTONES = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12];
@@ -52,6 +53,20 @@ function App() {
     };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
+  }, []);
+
+  // Auto-submit base-game stats to leaderboard every 15s when a new high is reached.
+  const baseStatsRef = useRef({ base_pancakes: 0, base_pps: 0, base_click: 0 });
+  baseStatsRef.current = {
+    base_pancakes: state.peakCookies,
+    base_pps: baseCps,
+    base_click: clickPower,
+  };
+  useEffect(() => {
+    const submit = () => submitBaseGameScoresIfBetter(baseStatsRef.current);
+    const initial = setTimeout(submit, 5000);
+    const id = setInterval(submit, 15000);
+    return () => { clearTimeout(initial); clearInterval(id); };
   }, []);
 
   // // "Order up!" voice — disabled for now (browser TTS sounds bad)
