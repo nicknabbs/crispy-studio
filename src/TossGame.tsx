@@ -10,7 +10,7 @@ const HEIGHT = 420;
 const PAN_Y = HEIGHT - 80;
 const PAN_WIDTH = 130;
 const PANCAKE_SIZE = 54;
-const CATCH_TOLERANCE = 20;
+const CATCH_TOLERANCE = 42;
 
 type Phase = 'ready' | 'tossing' | 'result';
 
@@ -41,7 +41,7 @@ export function TossGame({ onBack, onScore }: TossGameProps) {
   }, [highScore, onScore]);
 
   const toss = useCallback(() => {
-    const power = -10 - Math.min(catchesRef.current * 0.6, 9);
+    const power = -9 - Math.min(catchesRef.current * 0.35, 6);
     vyRef.current = power;
     setVy(power);
     inAirRef.current = true;
@@ -63,7 +63,7 @@ export function TossGame({ onBack, onScore }: TossGameProps) {
     let raf = 0;
     const tick = () => {
       if (inAirRef.current) {
-        vyRef.current += 0.45; // gravity
+        vyRef.current += 0.28; // gravity — gentler so the descent gives you time to react
         yRef.current += vyRef.current;
         if (yRef.current >= PAN_Y) {
           // Landed without a catch = game over

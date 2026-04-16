@@ -13,6 +13,7 @@ import { PourGame } from './PourGame';
 import { MazeGame } from './MazeGame';
 import { MemoryGame } from './MemoryGame';
 import { GridGame } from './GridGame';
+import { BlastGame } from './BlastGame';
 import { Leaderboard } from './Leaderboard';
 import { autoSubmitScore } from './autoSubmitScore';
 
@@ -21,7 +22,7 @@ interface MiniGamesProps {
   onClose: () => void;
 }
 
-type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid';
+type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast';
 
 const GAMES = [
   {
@@ -106,7 +107,13 @@ const GAMES = [
     id: 'grid' as const,
     name: 'Griddle Grid Puzzle',
     emoji: '🔲',
-    description: 'Fit pancake shapes on the griddle, clear full rows!',
+    description: 'Tetris-style: fit falling pancake pieces, clear full rows.',
+  },
+  {
+    id: 'blast' as const,
+    name: 'Pancake Blast',
+    emoji: '🧱',
+    description: 'Block Blast-style! Place pieces on an 8×8 grid, clear rows or columns.',
   },
 ];
 
@@ -152,6 +159,7 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   if (activeGame === 'maze') return <><MazeGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'memory') return <><MemoryGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'grid') return <><GridGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'blast') return <><BlastGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
 
   function NameModal() {
     if (!namePrompt) return null;

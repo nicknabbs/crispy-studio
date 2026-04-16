@@ -15,7 +15,7 @@ interface Berry {
 
 const WIDTH = 320;
 const HEIGHT = 380;
-const BERRY_SIZE = 36;
+const BERRY_SIZE = 44;
 const CATCH_Y = HEIGHT - 70;
 const START_LIVES = 3;
 
@@ -66,7 +66,7 @@ export function BerryGame({ onBack, onScore }: BerryGameProps) {
     const spawn = () => {
       if (!alive) return;
       const id = nextIdRef.current++;
-      const rotten = Math.random() < 0.4;
+      const rotten = Math.random() < 0.55;
       const berry: Berry = {
         id,
         x: 20 + Math.random() * (WIDTH - 40 - BERRY_SIZE),
@@ -75,7 +75,7 @@ export function BerryGame({ onBack, onScore }: BerryGameProps) {
         speed: fallSpeedRef.current + Math.random() * 0.6,
       };
       setBerries(prev => [...prev, berry]);
-      spawnRateRef.current = Math.max(500, spawnRateRef.current - 15);
+      spawnRateRef.current = Math.max(450, spawnRateRef.current - 18);
       fallSpeedRef.current = Math.min(4.5, fallSpeedRef.current + 0.04);
       setTimeout(spawn, spawnRateRef.current);
     };
@@ -185,7 +185,7 @@ export function BerryGame({ onBack, onScore }: BerryGameProps) {
               {berries.map(b => (
                 <button
                   key={b.id}
-                  onClick={() => tapBerry(b.id)}
+                  onPointerDown={e => { e.preventDefault(); tapBerry(b.id); }}
                   className="absolute cursor-pointer border-0 bg-transparent p-0 select-none"
                   style={{
                     left: b.x,
@@ -194,12 +194,13 @@ export function BerryGame({ onBack, onScore }: BerryGameProps) {
                     height: BERRY_SIZE,
                     fontSize: BERRY_SIZE - 4,
                     lineHeight: 1,
-                    filter: b.rotten ? 'grayscale(0.7) brightness(0.7)' : undefined,
+                    filter: b.rotten ? 'grayscale(0.7) brightness(0.6)' : undefined,
+                    touchAction: 'none',
                   }}
                 >
-                  {b.rotten ? '🫐' : '🫐'}
+                  🫐
                   {b.rotten && (
-                    <span className="absolute inset-0 flex items-center justify-center text-xl">🚫</span>
+                    <span className="absolute inset-0 flex items-center justify-center text-2xl">🚫</span>
                   )}
                 </button>
               ))}

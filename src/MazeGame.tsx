@@ -65,6 +65,7 @@ export function MazeGame({ onBack, onScore }: MazeGameProps) {
   const syrupRef = useRef(0);
   const timeRef = useRef(TIME_LIMIT);
   const phaseRef = useRef<'ready' | 'playing' | 'result'>('ready');
+  const holdTimerRef = useRef<number | null>(null);
 
   const endGame = useCallback((reachedExit: boolean) => {
     const timeBonus = reachedExit ? Math.round(timeRef.current * 3) : 0;
@@ -144,6 +145,31 @@ export function MazeGame({ onBack, onScore }: MazeGameProps) {
     return () => window.removeEventListener('keydown', handler);
   }, [move]);
 
+  // Press-and-hold movement
+  const startHold = useCallback((dr: number, dc: number) => {
+    move(dr, dc);
+    if (holdTimerRef.current !== null) window.clearInterval(holdTimerRef.current);
+    holdTimerRef.current = window.setInterval(() => move(dr, dc), 130);
+  }, [move]);
+
+  const stopHold = useCallback(() => {
+    if (holdTimerRef.current !== null) {
+      window.clearInterval(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const stop = () => stopHold();
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    return () => {
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      stopHold();
+    };
+  }, [stopHold]);
+
   // Swipe
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
@@ -220,14 +246,34 @@ export function MazeGame({ onBack, onScore }: MazeGameProps) {
                 />
               </div>
 
-              {/* Mobile d-pad */}
-              <div className="mt-3 grid grid-cols-3 gap-1" style={{ width: 180 }}>
+              {/* Mobile d-pad — press and hold to keep moving */}
+              <div className="mt-3 grid grid-cols-3 gap-1" style={{ width: 180, touchAction: 'none' }}>
                 <div />
-                <button onClick={() => move(-1, 0)} className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer">↑</button>
+                <button
+                  onPointerDown={e => { e.preventDefault(); startHold(-1, 0); }}
+                  onPointerUp={stopHold}
+                  onPointerLeave={stopHold}
+                  className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer select-none"
+                >↑</button>
                 <div />
-                <button onClick={() => move(0, -1)} className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer">←</button>
-                <button onClick={() => move(1, 0)} className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer">↓</button>
-                <button onClick={() => move(0, 1)} className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer">→</button>
+                <button
+                  onPointerDown={e => { e.preventDefault(); startHold(0, -1); }}
+                  onPointerUp={stopHold}
+                  onPointerLeave={stopHold}
+                  className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer select-none"
+                >←</button>
+                <button
+                  onPointerDown={e => { e.preventDefault(); startHold(1, 0); }}
+                  onPointerUp={stopHold}
+                  onPointerLeave={stopHold}
+                  className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer select-none"
+                >↓</button>
+                <button
+                  onPointerDown={e => { e.preventDefault(); startHold(0, 1); }}
+                  onPointerUp={stopHold}
+                  onPointerLeave={stopHold}
+                  className="py-2 rounded bg-pancake-gold text-pancake-brown font-bold border-0 cursor-pointer select-none"
+                >→</button>
               </div>
             </>
           )}

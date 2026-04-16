@@ -7,7 +7,7 @@ interface PourGameProps {
 
 const TOTAL_ROUNDS = 10;
 const MAX_WEIGHT = 100;
-const POUR_RATE = 1.4; // units per frame
+const POUR_RATE = 0.85; // units per frame
 
 type Phase = 'ready' | 'playing' | 'result';
 
