@@ -7,6 +7,8 @@ interface BlastGameProps {
 
 const GRID = 8;
 const CELL = 34;
+const BASE_CLEAR_POINTS = 10;
+const CHAIN_WINDOW = 3;
 
 type Cell = 0 | 1;
 type Shape = [number, number][];
@@ -114,7 +116,8 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
   const [tray, setTray] = useState<(typeof SHAPES[number] | null)[]>([null, null, null]);
   const [drag, setDrag] = useState<{ trayIdx: number; x: number; y: number } | null>(null);
   const [score, setScore] = useState(0);
-  const [combo, setCombo] = useState(0);
+  const [combo, setCombo] = useState<{ cleared: number; multi: number; gain: number } | null>(null);
+  const [multiplier, setMultiplier] = useState(1);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('pancake-blast-high');
     return saved ? parseInt(saved) : 0;
@@ -126,6 +129,8 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
   const phaseRef = useRef<Phase>('ready');
   const gridEl = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ trayIdx: number; x: number; y: number } | null>(null);
+  const multiplierRef = useRef(1);
+  const placementsSinceClearRef = useRef(0);
 
   const endGame = useCallback(() => {
     const final = scoreRef.current;
@@ -165,7 +170,10 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     setBoard(fresh);
     scoreRef.current = 0;
     setScore(0);
-    setCombo(0);
+    setCombo(null);
+    multiplierRef.current = 1;
+    placementsSinceClearRef.current = 0;
+    setMultiplier(1);
     setDrag(null);
     dragRef.current = null;
     const initial = pickThree();
@@ -200,10 +208,29 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     const { board: afterClear, cleared } = clearLines(afterPlace);
     boardRef.current = afterClear;
     setBoard(afterClear);
-    const gain = piece.cells.length + cleared * 20 + (cleared >= 2 ? 20 : 0);
+
+    const newSince = placementsSinceClearRef.current + 1;
+    let gain = piece.cells.length;
+    if (cleared > 0) {
+      // If previous clear was within CHAIN_WINDOW placements, keep the multiplier.
+      // Otherwise the chain broke — reset to 1x for this clear.
+      const activeMulti = newSince <= CHAIN_WINDOW ? multiplierRef.current : 1;
+      const clearGain = cleared * BASE_CLEAR_POINTS * activeMulti;
+      gain += clearGain;
+      setCombo({ cleared, multi: activeMulti, gain: clearGain });
+      multiplierRef.current = activeMulti + 1;
+      setMultiplier(multiplierRef.current);
+      placementsSinceClearRef.current = 0;
+    } else {
+      placementsSinceClearRef.current = newSince;
+      if (newSince > CHAIN_WINDOW && multiplierRef.current !== 1) {
+        multiplierRef.current = 1;
+        setMultiplier(1);
+      }
+      setCombo(null);
+    }
     scoreRef.current += gain;
     setScore(scoreRef.current);
-    setCombo(cleared > 0 ? cleared : 0);
 
     const newTray = [...trayRef.current];
     newTray[trayIdx] = null;
@@ -309,7 +336,25 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
               <span className="text-pancake-medium">Score: </span>
               <span className="font-bold text-pancake-brown text-lg">{score}</span>
             </div>
-            {combo > 0 && <div className="text-xs font-bold text-pancake-gold">+{combo} line{combo > 1 ? 's' : ''} cleared!</div>}
+            <div className="flex items-center gap-2">
+              {combo && (
+                <div className="text-xs font-bold text-pancake-gold">
+                  +{combo.gain} ({combo.cleared} line{combo.cleared > 1 ? 's' : ''}{combo.multi > 1 ? ` × ${combo.multi}` : ''})
+                </div>
+              )}
+              {multiplier > 1 && (
+                <div
+                  className="text-xs font-bold px-2 py-0.5 rounded-lg border-2"
+                  style={{
+                    borderColor: '#E85A71',
+                    color: '#E85A71',
+                    background: '#FFF0F2',
+                  }}
+                >
+                  🔥 ×{multiplier}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
