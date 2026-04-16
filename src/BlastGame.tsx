@@ -86,8 +86,7 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
   const [phase, setPhase] = useState<Phase>('ready');
   const [board, setBoard] = useState<Cell[][]>(emptyBoard());
   const [tray, setTray] = useState<(typeof SHAPES[number] | null)[]>([null, null, null]);
-  const [activeTrayIdx, setActiveTrayIdx] = useState<number | null>(null);
-  const [hover, setHover] = useState<{ r: number; c: number } | null>(null);
+  const [drag, setDrag] = useState<{ trayIdx: number; x: number; y: number } | null>(null);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [highScore, setHighScore] = useState(() => {
@@ -99,6 +98,8 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
   const trayRef = useRef<(typeof SHAPES[number] | null)[]>([null, null, null]);
   const scoreRef = useRef(0);
   const phaseRef = useRef<Phase>('ready');
+  const gridEl = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ trayIdx: number; x: number; y: number } | null>(null);
 
   const endGame = useCallback(() => {
     const final = scoreRef.current;
@@ -139,8 +140,8 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     scoreRef.current = 0;
     setScore(0);
     setCombo(0);
-    setActiveTrayIdx(null);
-    setHover(null);
+    setDrag(null);
+    dragRef.current = null;
     const initial = pickThree();
     trayRef.current = initial;
     setTray(initial);
@@ -148,12 +149,27 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     setPhase('playing');
   }, []);
 
-  const tryPlace = (r: number, c: number) => {
-    if (phaseRef.current !== 'playing') return;
-    if (activeTrayIdx === null) return;
-    const piece = trayRef.current[activeTrayIdx];
-    if (!piece) return;
-    if (!fits(boardRef.current, piece.cells, r, c)) return;
+  // Compute grid cell (top-left anchor of piece) from client coordinates.
+  // Offsets the piece so it floats above the finger for mobile usability.
+  const pointerToCell = (clientX: number, clientY: number, cells: Shape): { r: number; c: number } | null => {
+    const rect = gridEl.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const pieceCols = Math.max(...cells.map(c => c[1])) + 1;
+    const pieceRows = Math.max(...cells.map(c => c[0])) + 1;
+    // Center the piece on the pointer, lifted ~1.5 cells above finger for visibility
+    const localX = clientX - rect.left - (pieceCols * CELL) / 2;
+    const localY = clientY - rect.top - (pieceRows * CELL) / 2 - CELL * 1.2;
+    return {
+      r: Math.round(localY / CELL),
+      c: Math.round(localX / CELL),
+    };
+  };
+
+  const tryPlaceAt = (r: number, c: number, trayIdx: number) => {
+    if (phaseRef.current !== 'playing') return false;
+    const piece = trayRef.current[trayIdx];
+    if (!piece) return false;
+    if (!fits(boardRef.current, piece.cells, r, c)) return false;
     const afterPlace = place(boardRef.current, piece.cells, r, c);
     const { board: afterClear, cleared } = clearLines(afterPlace);
     boardRef.current = afterClear;
@@ -163,17 +179,46 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     setScore(scoreRef.current);
     setCombo(cleared > 0 ? cleared : 0);
 
-    // remove piece from tray
     const newTray = [...trayRef.current];
-    newTray[activeTrayIdx] = null;
+    newTray[trayIdx] = null;
     trayRef.current = newTray;
     setTray(newTray);
-    setActiveTrayIdx(null);
-    setHover(null);
 
     refillIfEmpty();
     setTimeout(checkGameOver, 0);
+    return true;
   };
+
+  // Global pointer handlers for drag
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const onMove = (e: PointerEvent) => {
+      if (!dragRef.current) return;
+      e.preventDefault();
+      const next = { ...dragRef.current, x: e.clientX, y: e.clientY };
+      dragRef.current = next;
+      setDrag(next);
+    };
+    const onUp = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const piece = trayRef.current[d.trayIdx];
+      if (piece) {
+        const cell = pointerToCell(e.clientX, e.clientY, piece.cells);
+        if (cell) tryPlaceAt(cell.r, cell.c, d.trayIdx);
+      }
+      dragRef.current = null;
+      setDrag(null);
+    };
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  });
 
   // When tray is all null, refill happens. Re-check game over after refill.
   useEffect(() => {
@@ -183,21 +228,34 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     }
   }, [tray, phase, checkGameOver]);
 
-  const canPlaceHere =
-    activeTrayIdx !== null && hover !== null
-      ? fits(boardRef.current, trayRef.current[activeTrayIdx]!.cells, hover.r, hover.c)
-      : false;
-
+  // Preview cells derived from current drag
   const previewCells = new Set<string>();
-  if (activeTrayIdx !== null && hover !== null) {
-    const piece = trayRef.current[activeTrayIdx];
+  let canPlaceHere = false;
+  let previewOriginCell: { r: number; c: number } | null = null;
+  if (drag) {
+    const piece = trayRef.current[drag.trayIdx];
     if (piece) {
-      for (const [dr, dc] of piece.cells) {
-        const nr = hover.r + dr, nc = hover.c + dc;
-        if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) previewCells.add(`${nr}-${nc}`);
+      const cell = pointerToCell(drag.x, drag.y, piece.cells);
+      if (cell) {
+        previewOriginCell = cell;
+        canPlaceHere = fits(boardRef.current, piece.cells, cell.r, cell.c);
+        for (const [dr, dc] of piece.cells) {
+          const nr = cell.r + dr, nc = cell.c + dc;
+          if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) previewCells.add(`${nr}-${nc}`);
+        }
       }
     }
   }
+  void previewOriginCell;
+
+  const startDrag = (trayIdx: number, e: React.PointerEvent) => {
+    if (phaseRef.current !== 'playing') return;
+    if (!trayRef.current[trayIdx]) return;
+    e.preventDefault();
+    const d = { trayIdx, x: e.clientX, y: e.clientY };
+    dragRef.current = d;
+    setDrag(d);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -225,6 +283,7 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
             <>
               {/* Grid */}
               <div
+                ref={gridEl}
                 className="relative rounded-lg overflow-hidden"
                 style={{ width: GRID * CELL, height: GRID * CELL, background: '#2b2b2b', touchAction: 'none' }}
               >
@@ -236,18 +295,12 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
                     return (
                       <div
                         key={key}
-                        onPointerEnter={() => activeTrayIdx !== null && setHover({ r, c })}
-                        onPointerDown={() => {
-                          if (activeTrayIdx !== null) {
-                            setHover({ r, c });
-                            tryPlace(r, c);
-                          }
-                        }}
-                        className="absolute cursor-pointer"
+                        className="absolute"
                         style={{
                           left: c * CELL, top: r * CELL, width: CELL, height: CELL,
                           padding: 2,
                           background: (r + c) % 2 === 0 ? '#333' : '#2b2b2b',
+                          pointerEvents: 'none',
                         }}
                       >
                         {filled && (
@@ -259,8 +312,8 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
                         {!filled && preview && (
                           <div className="w-full h-full rounded" style={{
                             background: canPlaceHere
-                              ? 'radial-gradient(ellipse at 40% 35%, rgba(245,200,100,0.5) 0%, rgba(184,136,32,0.35) 100%)'
-                              : 'rgba(255,80,80,0.35)',
+                              ? 'radial-gradient(ellipse at 40% 35%, rgba(245,200,100,0.6) 0%, rgba(184,136,32,0.4) 100%)'
+                              : 'rgba(255,80,80,0.4)',
                           }} />
                         )}
                       </div>
@@ -272,24 +325,21 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
               {/* Tray */}
               <div className="flex gap-3 items-center">
                 {tray.map((piece, i) => (
-                  <button
+                  <div
                     key={i}
-                    onClick={() => piece && setActiveTrayIdx(activeTrayIdx === i ? null : i)}
-                    disabled={!piece}
-                    className={`border-2 rounded-lg p-2 cursor-pointer transition-all ${
-                      activeTrayIdx === i
-                        ? 'border-pancake-gold bg-pancake-gold/30 scale-105'
-                        : 'border-pancake-medium bg-pancake-warm hover:bg-pancake-light/30'
-                    } disabled:opacity-30 disabled:cursor-not-allowed`}
-                    style={{ width: 90, height: 90 }}
+                    onPointerDown={e => piece && startDrag(i, e)}
+                    className={`border-2 rounded-lg p-2 transition-opacity select-none ${
+                      piece ? 'border-pancake-medium bg-pancake-warm cursor-grab active:cursor-grabbing' : 'border-shop-border/30 bg-transparent opacity-30'
+                    } ${drag?.trayIdx === i ? 'opacity-30' : ''}`}
+                    style={{ width: 90, height: 90, touchAction: 'none' }}
                   >
                     {piece && <PiecePreview cells={piece.cells} />}
-                  </button>
+                  </div>
                 ))}
               </div>
 
               <p className="text-xs text-pancake-medium text-center">
-                Tap a piece to pick it, then tap the grid to drop it.
+                Drag a pancake piece onto the grid to place it.
               </p>
             </>
           )}
@@ -322,6 +372,53 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
           )}
         </div>
       </div>
+
+      {drag && trayRef.current[drag.trayIdx] && (() => {
+        const piece = trayRef.current[drag.trayIdx]!;
+        const cols = Math.max(...piece.cells.map(c => c[1])) + 1;
+        const rows = Math.max(...piece.cells.map(c => c[0])) + 1;
+        const w = cols * CELL;
+        const h = rows * CELL;
+        const set = new Set(piece.cells.map(([r, c]) => `${r}-${c}`));
+        return (
+          <div
+            className="fixed pointer-events-none z-[70]"
+            style={{
+              left: drag.x - w / 2,
+              top: drag.y - h / 2 - CELL * 1.2,
+              width: w,
+              height: h,
+            }}
+          >
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `repeat(${cols}, ${CELL}px)`,
+                gridTemplateRows: `repeat(${rows}, ${CELL}px)`,
+              }}
+            >
+              {Array.from({ length: rows }).map((_, r) =>
+                Array.from({ length: cols }).map((_, c) => (
+                  <div
+                    key={`${r}-${c}`}
+                    style={{
+                      width: CELL, height: CELL, padding: 2,
+                    }}
+                  >
+                    {set.has(`${r}-${c}`) && (
+                      <div className="w-full h-full rounded" style={{
+                        background: 'radial-gradient(ellipse at 40% 35%, #F5C864 0%, #D4A030 60%, #B8860B 100%)',
+                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.25), 0 6px 14px rgba(0,0,0,0.3)',
+                        opacity: 0.95,
+                      }} />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
