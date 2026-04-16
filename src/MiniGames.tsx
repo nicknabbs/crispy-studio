@@ -6,6 +6,13 @@ import { FlipperGame } from './FlipperGame';
 import { CatcherGame } from './CatcherGame';
 import { RecipeGame } from './RecipeGame';
 import { ChopperGame } from './ChopperGame';
+import { SyrupGame } from './SyrupGame';
+import { BerryGame } from './BerryGame';
+import { TossGame } from './TossGame';
+import { PourGame } from './PourGame';
+import { MazeGame } from './MazeGame';
+import { MemoryGame } from './MemoryGame';
+import { GridGame } from './GridGame';
 import { Leaderboard } from './Leaderboard';
 import { autoSubmitScore } from './autoSubmitScore';
 
@@ -14,7 +21,7 @@ interface MiniGamesProps {
   onClose: () => void;
 }
 
-type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe';
+type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid';
 
 const GAMES = [
   {
@@ -59,6 +66,48 @@ const GAMES = [
     emoji: '🥣',
     description: 'Tap the right ingredients before time runs out!',
   },
+  {
+    id: 'syrup' as const,
+    name: 'Syrup Drizzle',
+    emoji: '🍯',
+    description: 'Trace the syrup shape and hit all the dots!',
+  },
+  {
+    id: 'berry' as const,
+    name: 'Blueberry Sort',
+    emoji: '🫐',
+    description: 'Tap ripe berries, let rotten ones fall. Three lives.',
+  },
+  {
+    id: 'toss' as const,
+    name: 'Pancake Toss & Catch',
+    emoji: '🥞',
+    description: 'Catch the pancake as it returns. Each catch goes higher!',
+  },
+  {
+    id: 'pour' as const,
+    name: 'Batter Pour Precision',
+    emoji: '🫗',
+    description: 'Hold to pour, release exactly at target weight.',
+  },
+  {
+    id: 'maze' as const,
+    name: 'Pancake Maze Roll',
+    emoji: '🌀',
+    description: 'Roll through the maze. Grab syrup, dodge burnt spots!',
+  },
+  {
+    id: 'memory' as const,
+    name: 'Short Stack Memory',
+    emoji: '🧠',
+    description: 'Watch the pattern of flashing pancakes, then tap it back!',
+  },
+  {
+    id: 'grid' as const,
+    name: 'Griddle Grid Puzzle',
+    emoji: '🔲',
+    description: 'Fit pancake shapes on the griddle, clear full rows!',
+  },
 ];
 
 export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
@@ -96,6 +145,13 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   if (activeGame === 'flipper') return <><FlipperGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'catcher') return <><CatcherGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'recipe') return <><RecipeGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'syrup') return <><SyrupGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'berry') return <><BerryGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'toss') return <><TossGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'pour') return <><PourGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'maze') return <><MazeGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'memory') return <><MemoryGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'grid') return <><GridGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
 
   function NameModal() {
     if (!namePrompt) return null;

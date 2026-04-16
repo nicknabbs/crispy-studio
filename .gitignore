@@ -26,3 +26,6 @@ src:*
 
 # Local Netlify folder
 .netlify
+
+# Local Claude Code config
+.claude
