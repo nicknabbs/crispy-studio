@@ -53,6 +53,32 @@ function anyFit(board: Cell[][], cells: Shape): boolean {
   return false;
 }
 
+// If (targetR, targetC) doesn't fit, find the closest cell within SNAP_RADIUS that does.
+// Returns the best cell and a flag indicating whether we actually snapped.
+function snapToValid(
+  board: Cell[][],
+  cells: Shape,
+  targetR: number,
+  targetC: number,
+): { r: number; c: number; snapped: boolean } | null {
+  if (fits(board, cells, targetR, targetC)) {
+    return { r: targetR, c: targetC, snapped: false };
+  }
+  const SNAP_RADIUS = 2;
+  let best: { r: number; c: number; dist2: number } | null = null;
+  for (let dr = -SNAP_RADIUS; dr <= SNAP_RADIUS; dr++) {
+    for (let dc = -SNAP_RADIUS; dc <= SNAP_RADIUS; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const r = targetR + dr;
+      const c = targetC + dc;
+      if (!fits(board, cells, r, c)) continue;
+      const d2 = dr * dr + dc * dc;
+      if (!best || d2 < best.dist2) best = { r, c, dist2: d2 };
+    }
+  }
+  return best ? { r: best.r, c: best.c, snapped: true } : null;
+}
+
 function place(board: Cell[][], cells: Shape, r: number, c: number): Cell[][] {
   const next = board.map(row => [...row]);
   for (const [dr, dc] of cells) next[r + dr][c + dc] = 1;
@@ -205,7 +231,10 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
       const piece = trayRef.current[d.trayIdx];
       if (piece) {
         const cell = pointerToCell(e.clientX, e.clientY, piece.cells);
-        if (cell) tryPlaceAt(cell.r, cell.c, d.trayIdx);
+        if (cell) {
+          const snap = snapToValid(boardRef.current, piece.cells, cell.r, cell.c);
+          if (snap) tryPlaceAt(snap.r, snap.c, d.trayIdx);
+        }
       }
       dragRef.current = null;
       setDrag(null);
@@ -228,25 +257,31 @@ export function BlastGame({ onBack, onScore }: BlastGameProps) {
     }
   }, [tray, phase, checkGameOver]);
 
-  // Preview cells derived from current drag
+  // Preview cells derived from current drag — uses snap-to-nearest-valid
   const previewCells = new Set<string>();
   let canPlaceHere = false;
-  let previewOriginCell: { r: number; c: number } | null = null;
   if (drag) {
     const piece = trayRef.current[drag.trayIdx];
     if (piece) {
       const cell = pointerToCell(drag.x, drag.y, piece.cells);
       if (cell) {
-        previewOriginCell = cell;
-        canPlaceHere = fits(boardRef.current, piece.cells, cell.r, cell.c);
-        for (const [dr, dc] of piece.cells) {
-          const nr = cell.r + dr, nc = cell.c + dc;
-          if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) previewCells.add(`${nr}-${nc}`);
+        const snap = snapToValid(boardRef.current, piece.cells, cell.r, cell.c);
+        if (snap) {
+          canPlaceHere = true;
+          for (const [dr, dc] of piece.cells) {
+            const nr = snap.r + dr, nc = snap.c + dc;
+            if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) previewCells.add(`${nr}-${nc}`);
+          }
+        } else {
+          // No valid snap anywhere nearby — show red preview at raw target
+          for (const [dr, dc] of piece.cells) {
+            const nr = cell.r + dr, nc = cell.c + dc;
+            if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) previewCells.add(`${nr}-${nc}`);
+          }
         }
       }
     }
   }
-  void previewOriginCell;
 
   const startDrag = (trayIdx: number, e: React.PointerEvent) => {
     if (phaseRef.current !== 'playing') return;
