@@ -36,7 +36,6 @@ const HACKS: { key: string; label: string; desc: string }[] = [
   { key: 'pancake-hack-maze-freeze',    label: '🌀 Pancake Maze Roll',       desc: 'Freeze timer (unlimited time)' },
   { key: 'pancake-hack-memory-timer',   label: '🧠 Short Stack Memory',      desc: '30s timer — spam buttons to rack up points' },
   { key: 'pancake-hack-grid-ghost',     label: '🔲 Griddle Grid Puzzle',     desc: 'Slow drop speed' },
-  { key: 'pancake-hack-blast-snap',     label: '🧱 Pancake Blast',           desc: 'Much bigger snap radius' },
 ];
 
 export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
@@ -50,6 +49,11 @@ export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
   const [newScoreInput, setNewScoreInput] = useState('');
   const [scoreEditorMsg, setScoreEditorMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [scoreEditorBusy, setScoreEditorBusy] = useState(false);
+
+  // Pancake Blast inline score editor
+  const [blastScoreInput, setBlastScoreInput] = useState('');
+  const [blastScoreMsg, setBlastScoreMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [blastScoreBusy, setBlastScoreBusy] = useState(false);
 
   if (!isOpen) return null;
 
@@ -209,6 +213,73 @@ export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
                   </div>
                 );
               })}
+
+              {/* Pancake Blast — inline score setter (replaces snap-radius toggle) */}
+              {(() => {
+                const currentBlastHigh = parseFloat(localStorage.getItem('pancake-blast-high') || '0');
+                const playerName = localStorage.getItem('pancake-player-name')?.trim() ?? '';
+                const setBlastScore = async () => {
+                  const parsed = parseFloat(blastScoreInput);
+                  if (!Number.isFinite(parsed) || parsed < 0) {
+                    setBlastScoreMsg({ kind: 'err', text: 'Enter a valid non-negative number.' });
+                    return;
+                  }
+                  if (parsed > MAX_EDITABLE_SCORE) {
+                    setBlastScoreMsg({ kind: 'err', text: `Max: ${formatNumber(MAX_EDITABLE_SCORE)} (999 DDc).` });
+                    return;
+                  }
+                  if (!playerName) {
+                    setBlastScoreMsg({ kind: 'err', text: 'Play any mini-game once to set your player name.' });
+                    return;
+                  }
+                  setBlastScoreBusy(true);
+                  setBlastScoreMsg(null);
+                  try {
+                    localStorage.setItem('pancake-blast-high', String(parsed));
+                    const result = await adminSetScore('blast', playerName, parsed);
+                    setBlastScoreMsg(result === 'ok'
+                      ? { kind: 'ok', text: `Blast score set to ${formatNumber(parsed)}!` }
+                      : { kind: 'err', text: 'Saved locally, but leaderboard update failed.' });
+                    setTick(t => t + 1);
+                  } finally {
+                    setBlastScoreBusy(false);
+                  }
+                };
+                return (
+                  <div className="border-t-2 border-fuchsia-500/20 mt-2 pt-3 flex flex-col gap-2">
+                    <div>
+                      <div className="text-sm font-bold text-pancake-brown">🧱 Pancake Blast</div>
+                      <div className="text-xs text-pancake-medium">
+                        Set your score directly · Current: <span className="font-bold">{formatNumber(currentBlastHigh)}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={blastScoreInput}
+                        onChange={e => { setBlastScoreInput(e.target.value); setBlastScoreMsg(null); }}
+                        max={MAX_EDITABLE_SCORE}
+                        step="any"
+                        placeholder="e.g. 999e39"
+                        className="flex-1 min-w-0 px-3 py-2 rounded-lg border-2 border-pancake-medium bg-white text-pancake-brown font-medium outline-none focus:border-pancake-gold"
+                      />
+                      <button
+                        disabled={blastScoreBusy || !blastScoreInput.trim()}
+                        onClick={setBlastScore}
+                        className="px-4 py-2 rounded-lg border-2 border-fuchsia-400 bg-fuchsia-600 text-white font-bold text-xs cursor-pointer hover:bg-fuchsia-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {blastScoreBusy ? '…' : 'Set'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-pancake-medium">Max: 999 DDc (duodecillion)</p>
+                    {blastScoreMsg && (
+                      <p className={`text-xs font-medium ${blastScoreMsg.kind === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
+                        {blastScoreMsg.text}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
