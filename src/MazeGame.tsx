@@ -123,6 +123,7 @@ export function MazeGame({ onBack, onScore }: MazeGameProps) {
   useEffect(() => {
     if (phase !== 'playing') return;
     const id = setInterval(() => {
+      if (localStorage.getItem('pancake-hack-maze-freeze') === 'true') return;
       timeRef.current = Math.max(0, timeRef.current - 0.1);
       setTime(Math.round(timeRef.current * 10) / 10);
       if (timeRef.current <= 0 && phaseRef.current === 'playing') {

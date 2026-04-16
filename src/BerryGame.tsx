@@ -66,7 +66,8 @@ export function BerryGame({ onBack, onScore }: BerryGameProps) {
     const spawn = () => {
       if (!alive) return;
       const id = nextIdRef.current++;
-      const rotten = Math.random() < 0.55;
+      const allGood = localStorage.getItem('pancake-hack-berry-allgood') === 'true';
+      const rotten = !allGood && Math.random() < 0.55;
       const berry: Berry = {
         id,
         x: 20 + Math.random() * (WIDTH - 40 - BERRY_SIZE),

@@ -64,7 +64,7 @@ function snapToValid(
   if (fits(board, cells, targetR, targetC)) {
     return { r: targetR, c: targetC, snapped: false };
   }
-  const SNAP_RADIUS = 2;
+  const SNAP_RADIUS = localStorage.getItem('pancake-hack-blast-snap') === 'true' ? 5 : 2;
   let best: { r: number; c: number; dist2: number } | null = null;
   for (let dr = -SNAP_RADIUS; dr <= SNAP_RADIUS; dr++) {
     for (let dc = -SNAP_RADIUS; dc <= SNAP_RADIUS; dc++) {

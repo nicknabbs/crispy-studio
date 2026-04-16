@@ -63,7 +63,8 @@ export function TossGame({ onBack, onScore }: TossGameProps) {
     let raf = 0;
     const tick = () => {
       if (inAirRef.current) {
-        vyRef.current += 0.28; // gravity — gentler so the descent gives you time to react
+        const easy = localStorage.getItem('pancake-hack-toss-easy') === 'true';
+        vyRef.current += easy ? 0.15 : 0.28; // gravity
         yRef.current += vyRef.current;
         if (yRef.current >= PAN_Y) {
           // Landed without a catch = game over
@@ -86,9 +87,11 @@ export function TossGame({ onBack, onScore }: TossGameProps) {
 
   const attemptCatch = useCallback(() => {
     if (phase !== 'tossing' || !inAirRef.current) return;
+    const easy = localStorage.getItem('pancake-hack-toss-easy') === 'true';
     // Must catch near the pan and while descending
     const descending = vyRef.current > 0;
-    const nearPan = Math.abs(yRef.current - PAN_Y) < CATCH_TOLERANCE;
+    const tolerance = easy ? CATCH_TOLERANCE * 2.5 : CATCH_TOLERANCE;
+    const nearPan = Math.abs(yRef.current - PAN_Y) < tolerance;
     if (descending && nearPan) {
       catchesRef.current += 1;
       setCatches(catchesRef.current);

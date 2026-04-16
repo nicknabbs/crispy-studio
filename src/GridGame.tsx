@@ -126,10 +126,11 @@ export function GridGame({ onBack, onScore }: GridGameProps) {
     spawnPiece();
   }, [spawnPiece]);
 
-  // Auto-drop every 700ms
+  // Auto-drop every 700ms (2000ms with hack)
   useEffect(() => {
     if (phase !== 'playing') return;
-    const id = setInterval(() => dropStep(), 700);
+    const slow = localStorage.getItem('pancake-hack-grid-ghost') === 'true';
+    const id = setInterval(() => dropStep(), slow ? 2000 : 700);
     return () => clearInterval(id);
   }, [phase, dropStep]);
 

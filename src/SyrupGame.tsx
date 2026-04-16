@@ -196,9 +196,19 @@ export function SyrupGame({ onBack, onScore }: SyrupGameProps) {
             onPointerUp={handleUp}
           >
             <svg width={CANVAS} height={CANVAS} className="absolute inset-0 pointer-events-none">
-              {gameState === 'playing' && (
-                <path d={targetStr} stroke="#5C3A10" strokeWidth="2" strokeDasharray="6 4" fill="none" opacity="0.35" />
-              )}
+              {gameState === 'playing' && (() => {
+                const bright = localStorage.getItem('pancake-hack-syrup-show') === 'true';
+                return (
+                  <path
+                    d={targetStr}
+                    stroke={bright ? '#FF3399' : '#5C3A10'}
+                    strokeWidth={bright ? 6 : 2}
+                    strokeDasharray={bright ? undefined : '6 4'}
+                    fill="none"
+                    opacity={bright ? 0.9 : 0.35}
+                  />
+                );
+              })()}
               {dots.map((d, i) => (
                 <circle
                   key={i}

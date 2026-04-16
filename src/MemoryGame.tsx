@@ -28,13 +28,15 @@ export function MemoryGame({ onBack, onScore }: MemoryGameProps) {
   const patternRef = useRef<number[]>([]);
 
   const playPattern = useCallback(async (seq: number[]) => {
+    const slow = localStorage.getItem('pancake-hack-memory-slow') === 'true';
+    const mult = slow ? 2 : 1;
     setPhase('showing');
     await new Promise(r => setTimeout(r, 600));
     for (const id of seq) {
       setFlashId(id);
-      await new Promise(r => setTimeout(r, 450));
+      await new Promise(r => setTimeout(r, 450 * mult));
       setFlashId(null);
-      await new Promise(r => setTimeout(r, 180));
+      await new Promise(r => setTimeout(r, 180 * mult));
     }
     setPhase('input');
     setInputIdx(0);

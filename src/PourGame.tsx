@@ -79,7 +79,9 @@ export function PourGame({ onBack, onScore }: PourGameProps) {
     let raf = 0;
     const tick = () => {
       if (pouringRef.current && weightRef.current < MAX_WEIGHT) {
-        weightRef.current = Math.min(MAX_WEIGHT, weightRef.current + POUR_RATE);
+        const slow = localStorage.getItem('pancake-hack-pour-slow') === 'true';
+        const rate = slow ? POUR_RATE * 0.35 : POUR_RATE;
+        weightRef.current = Math.min(MAX_WEIGHT, weightRef.current + rate);
         setWeight(weightRef.current);
         if (weightRef.current >= MAX_WEIGHT) {
           pouringRef.current = false;
