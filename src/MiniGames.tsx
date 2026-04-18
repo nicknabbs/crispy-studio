@@ -14,6 +14,7 @@ import { MazeGame } from './MazeGame';
 import { MemoryGame } from './MemoryGame';
 import { GridGame } from './GridGame';
 import { BlastGame } from './BlastGame';
+import { ShuffleGame } from './ShuffleGame';
 import { Leaderboard } from './Leaderboard';
 import { autoSubmitScore } from './autoSubmitScore';
 
@@ -22,7 +23,7 @@ interface MiniGamesProps {
   onClose: () => void;
 }
 
-type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast';
+type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast' | 'shuffle';
 
 const GAMES = [
   {
@@ -115,6 +116,12 @@ const GAMES = [
     emoji: '🧱',
     description: 'Block Blast-style! Place pieces on an 8×8 grid, clear rows or columns.',
   },
+  {
+    id: 'shuffle' as const,
+    name: 'Pancake Toppings Shuffle',
+    emoji: '🎩',
+    description: 'Track the berry pancake under three shuffled lids. +1000 per round, keep going till you slip! A girl named Mason helped bring this mini game to life.',
+  },
 ];
 
 export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
@@ -160,6 +167,7 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   if (activeGame === 'memory') return <><MemoryGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'grid') return <><GridGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'blast') return <><BlastGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'shuffle') return <><ShuffleGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
 
   function NameModal() {
     if (!namePrompt) return null;
