@@ -24,6 +24,11 @@ dist-ssr
 *.sw?
 src:*
 
+# Local env vars (API keys) — committed as .env.example only
+.env
+.env.*
+!.env.example
+
 # Local Netlify folder
 .netlify
 

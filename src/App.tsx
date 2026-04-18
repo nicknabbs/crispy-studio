@@ -14,6 +14,8 @@ import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
 import { MiniGameHacks } from './MiniGameHacks';
 import { Leaderboard } from './Leaderboard';
+import { PancakeStylist, PancakeStylistButton } from './PancakeStylist';
+import { useSkin } from './useSkin';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
 import { submitBaseGameScoresIfBetter } from './baseGameLeaderboard';
@@ -44,6 +46,8 @@ function App() {
   const [shaking, setShaking] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [muted, setMutedState] = useState(false);
+  const [stylistOpen, setStylistOpen] = useState(false);
+  const { skin, setSkin } = useSkin();
 
   // Init audio on first interaction
   useEffect(() => {
@@ -328,7 +332,10 @@ function App() {
           </div>
 
           {/* The Big Pancake */}
-          <PancakeButton onClick={handleClick} clickPower={clickPower} frenzy={isFrenzy} />
+          <PancakeButton onClick={handleClick} clickPower={clickPower} frenzy={isFrenzy} skin={skin} />
+
+          {/* Pancake stylist — smiley pancake sidekick */}
+          <PancakeStylistButton onClick={() => setStylistOpen(true)} />
 
           {/* Stats bar */}
           <div className="mt-4 flex gap-4 text-xs text-pancake-medium">
@@ -390,6 +397,13 @@ function App() {
       <Leaderboard
         isOpen={leaderboardOpen}
         onClose={() => setLeaderboardOpen(false)}
+      />
+
+      <PancakeStylist
+        isOpen={stylistOpen}
+        onClose={() => setStylistOpen(false)}
+        skin={skin}
+        onSkinChange={setSkin}
       />
 
       <MapleShop

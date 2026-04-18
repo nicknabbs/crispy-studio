@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { DEFAULT_SKIN, renderSkinLayers, type PancakeSkin } from './skinEngine';
 
 interface Particle {
   id: number;
@@ -16,11 +17,24 @@ interface FloatingNumber {
 
 let particleId = 0;
 
-export function PancakeButton({ onClick, clickPower, frenzy }: { onClick: () => void; clickPower: number; frenzy?: boolean }) {
+export function PancakeButton({
+  onClick,
+  clickPower,
+  frenzy,
+  skin,
+}: {
+  onClick: () => void;
+  clickPower: number;
+  frenzy?: boolean;
+  skin?: PancakeSkin | null;
+}) {
   const [pressed, setPressed] = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [floats, setFloats] = useState<FloatingNumber[]>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const activeSkin = skin ?? DEFAULT_SKIN;
+  const { base, pattern, topping } = renderSkinLayers(activeSkin, 'big');
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     onClick();
@@ -61,7 +75,11 @@ export function PancakeButton({ onClick, clickPower, frenzy }: { onClick: () => 
 
   const particleColors = frenzy
     ? ['#FFD700', '#FFC107', '#FFE082', '#FF9800']
-    : ['#F5C864', '#C89532', '#FFE082', '#D4A844'];
+    : [activeSkin.highlightColor, activeSkin.accentColor, '#FFE082', activeSkin.baseColor];
+
+  const glow = activeSkin.glow;
+  const frenzyShadow = 'drop-shadow(0 0 24px rgba(255, 215, 0, 0.8))';
+  const glowShadow = glow ? `drop-shadow(0 0 18px ${glow})` : undefined;
 
   return (
     <div className="relative flex items-center justify-center">
@@ -72,46 +90,24 @@ export function PancakeButton({ onClick, clickPower, frenzy }: { onClick: () => 
         style={{
           transform: pressed ? 'scale(0.92)' : 'scale(1)',
           transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          filter: frenzy ? 'drop-shadow(0 0 24px rgba(255, 215, 0, 0.8))' : undefined,
+          filter: frenzy ? frenzyShadow : glowShadow,
         }}
       >
-        {/* Pancake SVG */}
         <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-lg">
-          {/* Shadow/depth */}
-          <ellipse cx="100" cy="120" rx="88" ry="30" fill="#A0722C" opacity="0.3" />
-          {/* Pancake body */}
-          <ellipse cx="100" cy="105" rx="85" ry="55" fill="#D4A044" />
-          <ellipse cx="100" cy="105" rx="82" ry="52" fill="#E8B84C" />
-          {/* Top surface */}
-          <ellipse cx="100" cy="95" rx="78" ry="45" fill="#F0C85C" />
-          <ellipse cx="100" cy="95" rx="78" ry="45" fill="url(#pancakeGradient)" />
-          {/* Surface bubbles */}
-          <circle cx="70" cy="85" r="5" fill="#E8B84C" opacity="0.5" />
-          <circle cx="120" cy="80" r="4" fill="#E8B84C" opacity="0.4" />
-          <circle cx="90" cy="100" r="6" fill="#E8B84C" opacity="0.4" />
-          <circle cx="130" cy="95" r="4" fill="#E8B84C" opacity="0.5" />
-          <circle cx="75" cy="105" r="3" fill="#E8B84C" opacity="0.4" />
-          <circle cx="110" cy="110" r="5" fill="#E8B84C" opacity="0.3" />
-          <circle cx="55" cy="95" r="3.5" fill="#E8B84C" opacity="0.4" />
-          <circle cx="140" cy="85" r="3" fill="#E8B84C" opacity="0.4" />
-          {/* Edge ring */}
-          <ellipse cx="100" cy="95" rx="78" ry="45" fill="none" stroke="#C89532" strokeWidth="2" opacity="0.4" />
-          {/* Butter pat */}
-          <rect x="85" y="72" width="30" height="20" rx="4" fill="#FFE082" />
-          <rect x="87" y="74" width="26" height="16" rx="3" fill="#FFEE99" />
-          <rect x="89" y="76" width="10" height="6" rx="2" fill="#FFF9C4" opacity="0.7" />
-          {/* Syrup drizzle */}
-          <path d="M 75 90 Q 85 87 95 92 Q 105 97 115 90 Q 125 83 135 88" fill="none" stroke="#8B6914" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
-          <path d="M 65 100 Q 80 95 95 102 Q 110 109 125 100" fill="none" stroke="#8B6914" strokeWidth="2" strokeLinecap="round" opacity="0.35" />
           <defs>
             <radialGradient id="pancakeGradient" cx="40%" cy="35%">
               <stop offset="0%" stopColor="#FFE082" stopOpacity="0.4" />
               <stop offset="100%" stopColor="#C89532" stopOpacity="0" />
             </radialGradient>
+            <clipPath id="pancakeClip">
+              <ellipse cx="100" cy="95" rx="78" ry="45" />
+            </clipPath>
           </defs>
+          {base}
+          {pattern}
+          {topping}
         </svg>
 
-        {/* Batter splash particles */}
         {particles.map(p => (
           <span
             key={p.id}
@@ -129,7 +125,6 @@ export function PancakeButton({ onClick, clickPower, frenzy }: { onClick: () => 
           />
         ))}
 
-        {/* Floating numbers */}
         {floats.map(f => (
           <span
             key={f.id}
