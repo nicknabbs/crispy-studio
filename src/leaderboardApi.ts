@@ -85,41 +85,15 @@ export async function fetchLeaderboardPage(
 
 export async function submitScore(gameId: string, playerName: string, score: number): Promise<'ok' | 'not_better' | 'error'> {
   const trimmedName = playerName.trim().slice(0, 20);
-  const config = GAME_CONFIGS[gameId];
+  if (!trimmedName) return 'error';
+  const lowerIsBetter = GAME_CONFIGS[gameId]?.lowerIsBetter ?? false;
 
-  // Check for existing entry by this player for this game
-  const { data: existing } = await supabase
-    .from('leaderboard')
-    .select('id, score')
-    .eq('game_id', gameId)
-    .eq('player_name', trimmedName)
-    .limit(1);
-
-  if (existing && existing.length > 0) {
-    const isBetter = config?.lowerIsBetter
-      ? score < existing[0].score
-      : score > existing[0].score;
-
-    if (!isBetter) {
-      return 'not_better';
-    }
-
-    const { error } = await supabase
-      .from('leaderboard')
-      .update({ score })
-      .eq('id', existing[0].id);
-
-    if (error) {
-      console.error('Leaderboard update error:', error);
-      return 'error';
-    }
-    return 'ok';
-  }
-
-  // Insert new entry
-  const { error } = await supabase
-    .from('leaderboard')
-    .insert({ game_id: gameId, player_name: trimmedName, score });
+  const { error } = await supabase.rpc('submit_score', {
+    p_game_id: gameId,
+    p_player_name: trimmedName,
+    p_score: score,
+    p_lower_is_better: lowerIsBetter,
+  });
 
   if (error) {
     console.error('Leaderboard submit error:', error);
@@ -132,30 +106,15 @@ export async function adminSetScore(gameId: string, playerName: string, score: n
   const trimmedName = playerName.trim().slice(0, 20);
   if (!trimmedName) return 'error';
 
-  const { data: existing } = await supabase
-    .from('leaderboard')
-    .select('id')
-    .eq('game_id', gameId)
-    .eq('player_name', trimmedName)
-    .limit(1);
-
-  if (existing && existing.length > 0) {
-    const { error } = await supabase
-      .from('leaderboard')
-      .update({ score })
-      .eq('id', existing[0].id);
-    if (error) {
-      console.error('Admin update error:', error);
-      return 'error';
-    }
-    return 'ok';
-  }
-
   const { error } = await supabase
     .from('leaderboard')
-    .insert({ game_id: gameId, player_name: trimmedName, score });
+    .upsert(
+      { game_id: gameId, player_name: trimmedName, score },
+      { onConflict: 'game_id,player_name' },
+    );
+
   if (error) {
-    console.error('Admin insert error:', error);
+    console.error('Admin upsert error:', error);
     return 'error';
   }
   return 'ok';
