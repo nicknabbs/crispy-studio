@@ -24,6 +24,60 @@ interface MiniGamesProps {
   onClose: () => void;
 }
 
+// NameModal is a stable top-level component on purpose. Defining it inside
+// MiniGames made it a fresh function reference on every render — React saw
+// a new component type each time and remounted the input subtree, which
+// stole focus and dismissed the iOS keyboard mid-keystroke.
+interface NameModalProps {
+  open: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function NameModal({ open, value, onChange, onSave, onCancel }: NameModalProps) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-pancake-cream rounded-xl shadow-xl p-5 w-72">
+        <h3 className="font-bold text-pancake-brown text-lg mb-1">New High Score!</h3>
+        <p className="text-xs text-pancake-medium mb-3">Enter your name for the leaderboard</p>
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') onSave(); }}
+          maxLength={20}
+          placeholder="Your name..."
+          autoFocus
+          autoCapitalize="words"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          className="w-full px-3 py-2 rounded-lg border-2 border-pancake-medium bg-white text-pancake-brown text-sm mb-3 outline-none focus:border-pancake-gold"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-lg border-2 border-shop-border bg-pancake-warm text-pancake-brown text-sm font-bold cursor-pointer"
+          >
+            Skip
+          </button>
+          <button
+            onClick={onSave}
+            disabled={!value.trim()}
+            className="flex-1 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-sm font-bold cursor-pointer border-0 disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast' | 'shuffle' | 'pop';
 
 const GAMES = [
@@ -159,60 +213,35 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
 
   const goBack = () => setActiveGame(null);
 
-  if (activeGame === 'split') return <><SplitGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'edge') return <><EdgeSlicerGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'chopper') return <><ChopperGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'stacker') return <><StackerGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'flipper') return <><FlipperGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'catcher') return <><CatcherGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'recipe') return <><RecipeGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'syrup') return <><SyrupGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'berry') return <><BerryGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'toss') return <><TossGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'pour') return <><PourGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'maze') return <><MazeGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'memory') return <><MemoryGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'grid') return <><GridGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'blast') return <><BlastGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'shuffle') return <><ShuffleGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
-  if (activeGame === 'pop') return <><PopReactionGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  const namePromptOpen = !!namePrompt;
+  const onNameCancel = () => setNamePrompt(null);
+  const modal = (
+    <NameModal
+      open={namePromptOpen}
+      value={nameInput}
+      onChange={setNameInput}
+      onSave={handleNameSubmit}
+      onCancel={onNameCancel}
+    />
+  );
 
-  function NameModal() {
-    if (!namePrompt) return null;
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div className="bg-pancake-cream rounded-xl shadow-xl p-5 w-72">
-          <h3 className="font-bold text-pancake-brown text-lg mb-1">New High Score!</h3>
-          <p className="text-xs text-pancake-medium mb-3">Enter your name for the leaderboard</p>
-          <input
-            type="text"
-            value={nameInput}
-            onChange={e => setNameInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleNameSubmit()}
-            maxLength={20}
-            placeholder="Your name..."
-            autoFocus
-            className="w-full px-3 py-2 rounded-lg border-2 border-pancake-medium bg-white text-pancake-brown text-sm mb-3 outline-none focus:border-pancake-gold"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setNamePrompt(null)}
-              className="flex-1 py-2 rounded-lg border-2 border-shop-border bg-pancake-warm text-pancake-brown text-sm font-bold cursor-pointer"
-            >
-              Skip
-            </button>
-            <button
-              onClick={handleNameSubmit}
-              disabled={!nameInput.trim()}
-              className="flex-1 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-sm font-bold cursor-pointer border-0 disabled:opacity-50"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (activeGame === 'split') return <><SplitGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'edge') return <><EdgeSlicerGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'chopper') return <><ChopperGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'stacker') return <><StackerGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'flipper') return <><FlipperGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'catcher') return <><CatcherGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'recipe') return <><RecipeGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'syrup') return <><SyrupGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'berry') return <><BerryGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'toss') return <><TossGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'pour') return <><PourGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'maze') return <><MazeGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'memory') return <><MemoryGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'grid') return <><GridGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'blast') return <><BlastGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'shuffle') return <><ShuffleGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'pop') return <><PopReactionGame onBack={goBack} onScore={handleScore} />{modal}</>;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
