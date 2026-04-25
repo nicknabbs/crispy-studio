@@ -31,27 +31,59 @@ const PLURALS: Record<string, string> = {
   infiniteStack: 'Infinite Stacks',
 };
 
-// ── Generated: Per-building ownership (18 tiers × 8 buildings = 144) ──
+// ── Generated: Per-building ownership (50 tiers × 19 buildings = 950) ──
 function makeOwnershipAchievements(): AchievementDef[] {
   const tiers: { count: number; title: string; icon: string }[] = [
-    { count: 10, title: 'Pack', icon: '👥' },
-    { count: 25, title: 'Crew', icon: '🎪' },
-    { count: 50, title: 'Fleet', icon: '⛵' },
-    { count: 75, title: 'Brigade', icon: '🔥' },
-    { count: 100, title: 'Legion', icon: '⭐' },
-    { count: 125, title: 'Horde', icon: '⚔️' },
-    { count: 150, title: 'Armada', icon: '🛡️' },
-    { count: 175, title: 'Dominion', icon: '👑' },
-    { count: 200, title: 'Empire', icon: '🏰' },
-    { count: 225, title: 'Dynasty', icon: '🗿' },
-    { count: 250, title: 'Realm', icon: '🌋' },
-    { count: 300, title: 'Kingdom', icon: '🌍' },
-    { count: 350, title: 'Galaxy', icon: '🌌' },
-    { count: 400, title: 'Cosmos', icon: '💫' },
-    { count: 500, title: 'Infinity', icon: '♾️' },
-    { count: 600, title: 'Eternity', icon: '🔮' },
-    { count: 750, title: 'Omnipotence', icon: '🌠' },
-    { count: 1000, title: 'Transcendence', icon: '🏆' },
+    { count: 1,    title: 'Spark',          icon: '✨' },
+    { count: 2,    title: 'Pair',           icon: '👯' },
+    { count: 3,    title: 'Trio',           icon: '🍀' },
+    { count: 5,    title: 'Quintet',        icon: '🎵' },
+    { count: 10,   title: 'Pack',           icon: '👥' },
+    { count: 15,   title: 'Squad',          icon: '👫' },
+    { count: 20,   title: 'Score',          icon: '🎲' },
+    { count: 25,   title: 'Crew',           icon: '🎪' },
+    { count: 30,   title: 'Group',          icon: '👬' },
+    { count: 35,   title: 'Cohort',         icon: '🤝' },
+    { count: 40,   title: 'Tribe',          icon: '🥳' },
+    { count: 50,   title: 'Fleet',          icon: '⛵' },
+    { count: 60,   title: 'Battalion',      icon: '🪖' },
+    { count: 65,   title: 'Posse',          icon: '🤠' },
+    { count: 75,   title: 'Brigade',        icon: '🔥' },
+    { count: 80,   title: 'Regiment',       icon: '🎖️' },
+    { count: 85,   title: 'Detachment',     icon: '🪂' },
+    { count: 90,   title: 'Force',          icon: '💪' },
+    { count: 100,  title: 'Legion',         icon: '⭐' },
+    { count: 110,  title: 'Phalanx',        icon: '🛡️' },
+    { count: 125,  title: 'Horde',          icon: '⚔️' },
+    { count: 135,  title: 'Vanguard',       icon: '🪙' },
+    { count: 150,  title: 'Armada',         icon: '🚢' },
+    { count: 160,  title: 'Crusade',        icon: '🗡️' },
+    { count: 175,  title: 'Dominion',       icon: '👑' },
+    { count: 200,  title: 'Empire',         icon: '🏰' },
+    { count: 225,  title: 'Dynasty',        icon: '🗿' },
+    { count: 250,  title: 'Realm',          icon: '🌋' },
+    { count: 275,  title: 'Sovereignty',    icon: '⚜️' },
+    { count: 300,  title: 'Kingdom',        icon: '🌍' },
+    { count: 325,  title: 'Federation',     icon: '🪐' },
+    { count: 350,  title: 'Galaxy',         icon: '🌌' },
+    { count: 375,  title: 'Constellation',  icon: '🌠' },
+    { count: 400,  title: 'Cosmos',         icon: '💫' },
+    { count: 450,  title: 'Nebula',         icon: '☄️' },
+    { count: 500,  title: 'Infinity',       icon: '♾️' },
+    { count: 550,  title: 'Beyond',         icon: '🚀' },
+    { count: 600,  title: 'Eternity',       icon: '🔮' },
+    { count: 700,  title: 'Forever',        icon: '⏳' },
+    { count: 750,  title: 'Omnipotence',    icon: '🦅' },
+    { count: 800,  title: 'Apotheosis',     icon: '👼' },
+    { count: 900,  title: 'Pantheon',       icon: '🏛️' },
+    { count: 1000, title: 'Transcendence',  icon: '🏆' },
+    { count: 1100, title: 'Singularity',    icon: '🕳️' },
+    { count: 1250, title: 'Multiverse',     icon: '🌐' },
+    { count: 1500, title: 'Omniverse',      icon: '🌀' },
+    { count: 1750, title: 'Hyperverse',     icon: '💠' },
+    { count: 2000, title: 'Megaverse',      icon: '🎆' },
+    { count: 2500, title: 'Ultraverse',     icon: '🎇' },
+    { count: 3000, title: 'Beyond Reality', icon: '🌟' },
   ];
   return BUILDINGS.flatMap(b =>
     tiers.map(t => ({
@@ -119,6 +151,11 @@ const MANUAL: AchievementDef[] = [
   { id: 'click-5m', name: 'Click Maniac', description: 'Click the pancake 5,000,000 times', icon: '🌪️', category: 'Clicking', check: s => s.totalClicks >= 5e6 },
   { id: 'click-10m', name: 'Click Overlord', description: 'Click the pancake 10,000,000 times', icon: '👑', category: 'Clicking', check: s => s.totalClicks >= 1e7 },
   { id: 'click-50m', name: 'Click Deity', description: 'Click the pancake 50,000,000 times', icon: '🌟', category: 'Clicking', check: s => s.totalClicks >= 5e7 },
+  { id: 'click-100m', name: 'Galactic Tapper', description: 'Click the pancake 100,000,000 times', icon: '🌌', category: 'Clicking', check: s => s.totalClicks >= 1e8 },
+  { id: 'click-500m', name: 'Half-Billion Fingers', description: 'Click the pancake 500,000,000 times', icon: '👐', category: 'Clicking', check: s => s.totalClicks >= 5e8 },
+  { id: 'click-1b', name: 'Billion-Click Beast', description: 'Click the pancake 1,000,000,000 times', icon: '🦾', category: 'Clicking', check: s => s.totalClicks >= 1e9 },
+  { id: 'click-10b', name: 'Click Eternal', description: 'Click the pancake 10,000,000,000 times', icon: '♾️', category: 'Clicking', check: s => s.totalClicks >= 1e10 },
+  { id: 'click-100b', name: 'Click Omega', description: 'Click the pancake 100,000,000,000 times', icon: '🛐', category: 'Clicking', check: s => s.totalClicks >= 1e11 },
 
   // ── Flipping / Lifetime Baked (18) ────────────────────────
   { id: 'bake-100', name: 'Amateur Flipper', description: 'Flip 100 pancakes', icon: '🧁', category: 'Flipping', check: s => s.lifetimeBaked >= 100 },
@@ -139,6 +176,10 @@ const MANUAL: AchievementDef[] = [
   { id: 'bake-100b', name: 'Pancake Emperor', description: 'Flip 100 billion pancakes', icon: '🏰', category: 'Flipping', check: s => s.lifetimeBaked >= 1e11 },
   { id: 'bake-1t', name: 'Trillionaire Flipper', description: 'Flip 1 trillion pancakes', icon: '🌍', category: 'Flipping', check: s => s.lifetimeBaked >= 1e12 },
   { id: 'bake-100t', name: 'Cosmic Flipper', description: 'Flip 100 trillion pancakes', icon: '🌌', category: 'Flipping', check: s => s.lifetimeBaked >= 1e14 },
+  { id: 'bake-1qa', name: 'Quadrillion Flipper', description: 'Flip 1 quadrillion pancakes', icon: '🌠', category: 'Flipping', check: s => s.lifetimeBaked >= 1e15 },
+  { id: 'bake-100qa', name: 'Galactic Flipper', description: 'Flip 100 quadrillion pancakes', icon: '🪐', category: 'Flipping', check: s => s.lifetimeBaked >= 1e17 },
+  { id: 'bake-1qi', name: 'Quintillion Flipper', description: 'Flip 1 quintillion pancakes', icon: '🌀', category: 'Flipping', check: s => s.lifetimeBaked >= 1e18 },
+  { id: 'bake-1sx', name: 'Sextillion Flipper', description: 'Flip 1 sextillion pancakes', icon: '🪐', category: 'Flipping', check: s => s.lifetimeBaked >= 1e21 },
 
   // ── Production / CpS (14) ────────────────────────────────
   { id: 'cps-1', name: 'First Drip', description: 'Reach 1 pancake per second', icon: '💧', category: 'Production', check: (_s, c) => (c || 0) >= 1 },
@@ -155,6 +196,9 @@ const MANUAL: AchievementDef[] = [
   { id: 'cps-500k', name: 'Pancake Warp', description: 'Reach 500,000 pancakes per second', icon: '🌀', category: 'Production', check: (_s, c) => (c || 0) >= 500000 },
   { id: 'cps-1m', name: 'Infinite Breakfast', description: 'Reach 1,000,000 pancakes per second', icon: '♾️', category: 'Production', check: (_s, c) => (c || 0) >= 1e6 },
   { id: 'cps-10m', name: 'Pancake Big Bang', description: 'Reach 10,000,000 pancakes per second', icon: '💥', category: 'Production', check: (_s, c) => (c || 0) >= 1e7 },
+  { id: 'cps-100m', name: 'Galactic Output', description: 'Reach 100,000,000 pancakes per second', icon: '🌌', category: 'Production', check: (_s, c) => (c || 0) >= 1e8 },
+  { id: 'cps-1b', name: 'Billion-PpS Brigade', description: 'Reach 1,000,000,000 pancakes per second', icon: '🚀', category: 'Production', check: (_s, c) => (c || 0) >= 1e9 },
+  { id: 'cps-10b', name: 'Cosmic Conveyor', description: 'Reach 10,000,000,000 pancakes per second', icon: '🌠', category: 'Production', check: (_s, c) => (c || 0) >= 1e10 },
 
   // ── First Purchases (8) ───────────────────────────────────
   { id: 'first-spatula', name: 'Hands Free', description: 'Buy your first Spatula', icon: '🍳', category: 'Buildings', check: s => (s.buildingCounts['spatula'] || 0) >= 1 },
@@ -227,6 +271,9 @@ const MANUAL: AchievementDef[] = [
   { id: 'bank-100b', name: 'Breakfast Treasury', description: 'Hold 100 billion pancakes at once', icon: '👑', category: 'Wealth', check: s => s.cookies >= 1e11 },
   { id: 'bank-1t', name: 'Dimension Bank', description: 'Hold 1 trillion pancakes at once', icon: '🌌', category: 'Wealth', check: s => s.cookies >= 1e12 },
   { id: 'bank-10t', name: 'Reality Vault', description: 'Hold 10 trillion pancakes at once', icon: '🔮', category: 'Wealth', check: s => s.cookies >= 1e13 },
+  { id: 'bank-100t', name: 'Multiverse Vault', description: 'Hold 100 trillion pancakes at once', icon: '🌌', category: 'Wealth', check: s => s.cookies >= 1e14 },
+  { id: 'bank-1qa', name: 'Quadrillion Holdings', description: 'Hold 1 quadrillion pancakes at once', icon: '💎', category: 'Wealth', check: s => s.cookies >= 1e15 },
+  { id: 'bank-1qi', name: 'Quintillion Holdings', description: 'Hold 1 quintillion pancakes at once', icon: '♾️', category: 'Wealth', check: s => s.cookies >= 1e18 },
 
   // ── Prestige (10) ─────────────────────────────────────────
   { id: 'pres-1', name: 'Rebirth', description: 'Prestige for the first time', icon: '⭐', category: 'Prestige', check: s => s.prestigeCount >= 1 },
@@ -239,6 +286,8 @@ const MANUAL: AchievementDef[] = [
   { id: 'pres-50', name: 'Prestige Junkie', description: 'Prestige 50 times', icon: '🌠', category: 'Prestige', check: s => s.prestigeCount >= 50 },
   { id: 'pres-100', name: 'Century of Rebirths', description: 'Prestige 100 times', icon: '💫', category: 'Prestige', check: s => s.prestigeCount >= 100 },
   { id: 'pres-250', name: 'Eternal Cycle', description: 'Prestige 250 times', icon: '♾️', category: 'Prestige', check: s => s.prestigeCount >= 250 },
+  { id: 'pres-500', name: 'Loop of Loops', description: 'Prestige 500 times', icon: '🌀', category: 'Prestige', check: s => s.prestigeCount >= 500 },
+  { id: 'pres-1000', name: 'Reincarnation God', description: 'Prestige 1,000 times', icon: '🔁', category: 'Prestige', check: s => s.prestigeCount >= 1000 },
 
   // ── Maple Stars (10) ──────────────────────────────────────
   { id: 'stars-1', name: 'First Star', description: 'Earn 1 Maple Star', icon: '⭐', category: 'Prestige', check: s => s.sugarStars >= 1 },
@@ -251,6 +300,9 @@ const MANUAL: AchievementDef[] = [
   { id: 'stars-200', name: 'Galaxy Maker', description: 'Earn 200 Maple Stars', icon: '🌌', category: 'Prestige', check: s => s.sugarStars >= 200 },
   { id: 'stars-500', name: 'Universe Weaver', description: 'Earn 500 Maple Stars', icon: '🌠', category: 'Prestige', check: s => s.sugarStars >= 500 },
   { id: 'stars-1000', name: 'Star God', description: 'Earn 1,000 Maple Stars', icon: '💫', category: 'Prestige', check: s => s.sugarStars >= 1000 },
+  { id: 'stars-2500', name: 'Star Tycoon', description: 'Earn 2,500 Maple Stars', icon: '🌟', category: 'Prestige', check: s => s.sugarStars >= 2500 },
+  { id: 'stars-5000', name: 'Star Magnate', description: 'Earn 5,000 Maple Stars', icon: '✨', category: 'Prestige', check: s => s.sugarStars >= 5000 },
+  { id: 'stars-10000', name: 'Star Singularity', description: 'Earn 10,000 Maple Stars', icon: '🌠', category: 'Prestige', check: s => s.sugarStars >= 10000 },
 
   // ── Butter Pats (10) ──────────────────────────────────────
   { id: 'butter-1', name: 'Lucky Find', description: 'Catch a butter pat', icon: '🧈', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 1 },
@@ -263,6 +315,10 @@ const MANUAL: AchievementDef[] = [
   { id: 'butter-100', name: 'Butter Baron', description: 'Catch 100 butter pats', icon: '🏆', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 100 },
   { id: 'butter-250', name: 'Butter Mogul', description: 'Catch 250 butter pats', icon: '💛', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 250 },
   { id: 'butter-500', name: 'Butter Deity', description: 'Catch 500 butter pats', icon: '🌟', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 500 },
+  { id: 'butter-1k', name: 'Butter Avalanche', description: 'Catch 1,000 butter pats', icon: '🌨️', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 1000 },
+  { id: 'butter-2k', name: 'Butter Empire', description: 'Catch 2,000 butter pats', icon: '🏰', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 2000 },
+  { id: 'butter-5k', name: 'Butter Cosmos', description: 'Catch 5,000 butter pats', icon: '🌌', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 5000 },
+  { id: 'butter-10k', name: 'Butter Infinity', description: 'Catch 10,000 butter pats', icon: '♾️', category: 'Butter Pats', check: s => s.goldenCookiesCaught >= 10000 },
 
   // ── Achievement Milestones (8) ────────────────────────────
   { id: 'ach-10', name: 'Getting Started', description: 'Unlock 10 achievements', icon: '🎖️', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 10 },
@@ -273,6 +329,9 @@ const MANUAL: AchievementDef[] = [
   { id: 'ach-200', name: 'Trophy Room', description: 'Unlock 200 achievements', icon: '🏆', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 200 },
   { id: 'ach-250', name: 'Medal Collector', description: 'Unlock 250 achievements', icon: '🎗️', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 250 },
   { id: 'ach-300', name: 'Nearly There', description: 'Unlock 300 achievements', icon: '🎗️', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 300 },
+  { id: 'ach-400', name: 'Trophy Tycoon', description: 'Unlock 400 achievements', icon: '🏆', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 400 },
+  { id: 'ach-500', name: 'Half-Way Hero', description: 'Unlock 500 achievements', icon: '🏆', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 500 },
+  { id: 'ach-1000', name: 'Quadruple-Digit Club', description: 'Unlock 1,000 achievements', icon: '🥇', category: 'Milestones', check: s => Object.keys(s.unlockedAchievements).length >= 1000 },
 
   // ── Fun / Combos (30) ─────────────────────────────────────
   { id: 'combo-double', name: 'Double Trouble', description: 'Own at least 2 of every building type', icon: '✌️', category: 'Combos', check: s => BUILDINGS.every(b => (s.buildingCounts[b.id] || 0) >= 2) },
