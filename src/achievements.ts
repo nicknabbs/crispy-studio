@@ -89,7 +89,7 @@ function makeOwnershipAchievements(): AchievementDef[] {
     tiers.map(t => ({
       id: `own-${b.id}-${t.count}`,
       name: `${b.name} ${t.title}`,
-      description: `Own ${t.count.toLocaleString()} ${PLURALS[b.id]}`,
+      description: `Own ${t.count.toLocaleString()} ${PLURALS[b.id] ?? `${b.name}s`}`,
       icon: t.icon,
       category: 'Ownership',
       check: (s: GameState) => (s.buildingCounts[b.id] || 0) >= t.count,
@@ -241,8 +241,8 @@ const MANUAL: AchievementDef[] = [
   { id: 'upg-35', name: 'Upgrade Fanatic', description: 'Purchase 35 upgrades', icon: '🌟', category: 'Upgrades', check: s => countUpgrades(s) >= 35 },
   { id: 'upg-all-bldg', name: 'Fully Upgraded', description: 'Purchase every building upgrade', icon: '🏅', category: 'Upgrades', check: s => UPGRADES.every(u => s.purchasedUpgrades[u.id]) },
 
-  // ── Building Upgrade Sets (8) ─────────────────────────────
-  ...BUILDINGS.map(b => ({
+  // ── Building Upgrade Sets (one per building that has upgrades defined) ─
+  ...BUILDINGS.filter(b => UPGRADES.some(u => u.buildingId === b.id)).map(b => ({
     id: `upg-set-${b.id}`,
     name: `${b.name} Mastery`,
     description: `Buy all upgrades for ${b.name}`,
@@ -346,7 +346,7 @@ const MANUAL: AchievementDef[] = [
   { id: 'combo-fan', name: 'Dedicated Fan', description: 'Own 200+ of any single building type', icon: '❤️', category: 'Combos', check: s => BUILDINGS.some(b => (s.buildingCounts[b.id] || 0) >= 200) },
   { id: 'combo-obsessed', name: 'Obsessed', description: 'Own 500+ of any single building type', icon: '😍', category: 'Combos', check: s => BUILDINGS.some(b => (s.buildingCounts[b.id] || 0) >= 500) },
   { id: 'combo-truly-obs', name: 'Truly Obsessed', description: 'Own 1,000+ of any single building type', icon: '🤯', category: 'Combos', check: s => BUILDINGS.some(b => (s.buildingCounts[b.id] || 0) >= 1000) },
-  { id: 'combo-jack', name: 'Jack of All Trades', description: 'Buy at least 1 upgrade for each building type', icon: '🃏', category: 'Combos', check: s => BUILDINGS.every(b => UPGRADES.some(u => u.buildingId === b.id && s.purchasedUpgrades[u.id])) },
+  { id: 'combo-jack', name: 'Jack of All Trades', description: 'Buy at least 1 upgrade for each building type that has upgrades', icon: '🃏', category: 'Combos', check: s => BUILDINGS.filter(b => UPGRADES.some(u => u.buildingId === b.id)).every(b => UPGRADES.some(u => u.buildingId === b.id && s.purchasedUpgrades[u.id])) },
   { id: 'combo-cps-click', name: 'CpS Clicker', description: 'Buy a CpS-per-click upgrade', icon: '📈', category: 'Combos', check: s => CLICK_UPGRADES.some(cu => cu.addCpsPercent && s.purchasedClickUpgrades[cu.id]) },
   { id: 'combo-no-prestige', name: 'No Prestige Needed', description: 'Reach 10,000 PpS without ever prestiging', icon: '💪', category: 'Combos', check: (s, c) => s.prestigeCount === 0 && (c || 0) >= 10000 },
   { id: 'combo-star-power', name: 'Star Power', description: 'Have 25+ Maple Stars and 10,000+ PpS', icon: '⚡', category: 'Combos', check: (s, c) => s.sugarStars >= 25 && (c || 0) >= 10000 },

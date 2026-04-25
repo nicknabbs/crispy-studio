@@ -7,7 +7,7 @@ export interface BuildingDef {
   flavor: string;
 }
 
-export const BUILDINGS: BuildingDef[] = [
+const BASE_BUILDINGS: BuildingDef[] = [
   { id: 'spatula', name: 'Spatula', baseCost: 15, baseCps: 0.1, emoji: '🍳', flavor: 'A trusty spatula that flips on its own.' },
   { id: 'cook', name: 'Short-Order Cook', baseCost: 100, baseCps: 1, emoji: '👨‍🍳', flavor: 'Flips pancakes with lightning speed and never burns a batch.' },
   { id: 'griddle', name: 'Griddle', baseCost: 1100, baseCps: 8, emoji: '♨️', flavor: 'An industrial flattop that never cools down.' },
@@ -28,6 +28,75 @@ export const BUILDINGS: BuildingDef[] = [
   { id: 'realityBaker', name: 'Reality Baker', baseCost: 51e18, baseCps: 8.3e12, emoji: '🧬', flavor: 'Rewrites the laws of physics so everything is made of pancake.' },
   { id: 'infiniteStack', name: 'Infinite Stack', baseCost: 640e18, baseCps: 64e12, emoji: '♾️', flavor: 'An infinitely tall stack. Mathematicians weep. Breakfast is served.' },
 ];
+
+// 50 extension tiers beyond Infinite Stack — each ~×12 cost and ~×8 cps
+// of the previous. Built for the galaxy-pancake set who want to keep buying.
+const EXTENSION_META: { id: string; name: string; emoji: string; flavor: string }[] = [
+  { id: 'hyperflap',         name: 'Hyperflapjack Engine',     emoji: '🛞', flavor: 'A wheel of compressed time. Each rotation flips a billion pancakes.' },
+  { id: 'wormholePan',        name: 'Wormhole Pan',             emoji: '🌪️', flavor: 'Pancakes go in one side and arrive cooked yesterday from the other.' },
+  { id: 'stellarSkillet',     name: 'Stellar Skillet',          emoji: '⭐', flavor: 'Powered by a captured star. Maintenance is mostly fireproofing.' },
+  { id: 'galacticRefinery',   name: 'Galactic Refinery',        emoji: '🌟', flavor: 'Refines starlight directly into syrup. No middleman.' },
+  { id: 'timeLoopPan',        name: 'Time-Loop Pan',            emoji: '⏰', flavor: 'Cooks the same pancake forever. Output is somehow infinite anyway.' },
+  { id: 'multiMixer',         name: 'Multiversal Mixer',        emoji: '🎛️', flavor: 'Blends batter from every parallel universe at once.' },
+  { id: 'echoFlip',           name: 'Echo Flip',                emoji: '📢', flavor: 'Each flip echoes back from the future, doubling itself.' },
+  { id: 'probPancake',        name: 'Probability Pancake',      emoji: '🎲', flavor: 'Statistically, you already own infinity of these. Just collect them.' },
+  { id: 'schrodingerSkillet', name: "Schrödinger's Skillet",    emoji: '🐈', flavor: 'Both fully cooked and not, until you try to eat one.' },
+  { id: 'hivemind',           name: 'Pancake Hivemind',         emoji: '🐝', flavor: 'A swarm of sentient pancakes that flip in perfect unison.' },
+  { id: 'sentientMaple',      name: 'Sentient Maple Tree',      emoji: '🌳', flavor: 'It writes its own syrup. The poetry is decent.' },
+  { id: 'dreamBakery',        name: 'Dream Bakery',             emoji: '💭', flavor: 'Bakes pancakes that only exist while you remember them.' },
+  { id: 'lucidGriddle',       name: 'Lucid Griddle',            emoji: '😴', flavor: 'A griddle aware that it is a griddle. Existential, but productive.' },
+  { id: 'astralSpatula',      name: 'Astral Spatula',           emoji: '🧘', flavor: 'Flips pancakes on the astral plane and sends them back gently.' },
+  { id: 'etherealFlipper',    name: 'Ethereal Flipper',         emoji: '👻', flavor: 'You cannot see it, but the pancakes keep arriving.' },
+  { id: 'pancakeNexus',       name: 'Pancake Nexus',            emoji: '🔗', flavor: 'Every griddle that ever was and ever will be, connected.' },
+  { id: 'worldTree',          name: 'Pancake World Tree',       emoji: '🌲', flavor: 'Roots in the kitchen, branches across nine realms of breakfast.' },
+  { id: 'ouroboros',          name: 'Ouroboros Pancake',        emoji: '🐍', flavor: 'A pancake that eats its own tail. The output is enormous.' },
+  { id: 'towerPancake',       name: 'Tower of Pancake',         emoji: '🗼', flavor: 'They tried to build it to heaven. Heaven complained.' },
+  { id: 'conceptBreakfast',   name: 'Concept of Breakfast',     emoji: '💡', flavor: 'Not a pancake — the idea of one. Somehow more efficient.' },
+  { id: 'platonicPancake',    name: 'Platonic Pancake',         emoji: '🎓', flavor: 'The perfect ideal of which all other pancakes are mere shadows.' },
+  { id: 'universePancake',    name: 'Universe-Pancake',         emoji: '🪐', flavor: 'The universe is a flat disc on a turtle. The disc is a pancake.' },
+  { id: 'heatDeath',          name: 'Pancake Heat Death',       emoji: '🥵', flavor: 'Entropy converted directly to breakfast. Terms apply.' },
+  { id: 'antiPancake',        name: 'Anti-Pancake',             emoji: '➖', flavor: 'A negative pancake. Through arithmetic alchemy, it adds positive ones.' },
+  { id: 'boltzmannPancake',   name: 'Boltzmann Pancake',        emoji: '🧠', flavor: 'A pancake that randomly assembled in deep space. Statistically inevitable.' },
+  { id: 'recursivePancake',   name: 'Recursive Pancake',        emoji: '🔄', flavor: 'Each pancake produces another, which produces another, which—' },
+  { id: 'pancakeCompiler',    name: 'Pancake Compiler',         emoji: '⚙️', flavor: 'Compiles batter into bytecode and executes it on a hot griddle.' },
+  { id: 'pancakeFractal',     name: 'Pancake Fractal',          emoji: '❄️', flavor: 'Zoom in on any pancake. There is another pancake there. Forever.' },
+  { id: 'pancakeOS',          name: 'Pancake OS',               emoji: '💻', flavor: 'Boots in 0.3 seconds. Reboots add syrup. EULA is delicious.' },
+  { id: 'sourceCode',         name: 'Pancake Source Code',      emoji: '📜', flavor: 'The actual source of all pancakes. Forking is encouraged.' },
+  { id: 'pancakeAuthor',      name: 'Pancake Author',           emoji: '✍️', flavor: 'Writes pancakes into existence with a quill of pure butter.' },
+  { id: 'pancakeReader',      name: 'Pancake Reader',           emoji: '📖', flavor: 'Reads the pancakes back out. Some readers double as eaters.' },
+  { id: 'pancakeVerse',       name: 'Pancake-Verse',            emoji: '📚', flavor: 'A complete encyclopedia of every pancake that ever existed.' },
+  { id: 'lastPancake',        name: 'The Last Pancake',         emoji: '🏁', flavor: 'After this one there are no more. Until tomorrow morning.' },
+  { id: 'firstPancake',       name: 'The First Pancake',        emoji: '🥚', flavor: 'The original. The one all others descend from. Slightly burnt.' },
+  { id: 'forgottenPancake',   name: 'Forgotten Pancake',        emoji: '❓', flavor: 'You owned this pancake once. You will own it again. You will not remember.' },
+  { id: 'unspokenPancake',    name: 'Unspoken Pancake',         emoji: '🤐', flavor: 'A pancake whose name cannot be said. Its CPS is unaffected.' },
+  { id: 'ineffablePancake',   name: 'Ineffable Pancake',        emoji: '💫', flavor: 'Beyond words, beyond syrup, beyond breakfast itself.' },
+  { id: 'beyondTimePancake',  name: 'Pancake Beyond Time',      emoji: '⏳', flavor: 'It existed before clocks. It will exist after them. It is the clock.' },
+  { id: 'outsideSpace',       name: 'Pancake Outside Space',    emoji: '📏', flavor: 'A pancake with no length, width, or height. Tastes great anyway.' },
+  { id: 'noReference',        name: 'Pancake Without Reference', emoji: '🪞', flavor: 'A pancake that is not relative to anything. Itself only.' },
+  { id: 'hungryVoid',         name: 'Hungry Void',              emoji: '🌑', flavor: 'A void that eats pancakes and outputs more pancakes. Net positive.' },
+  { id: 'devouringStack',     name: 'Devouring Stack',          emoji: '🦷', flavor: 'A stack so tall it eats its own top floor. The sound is unsettling.' },
+  { id: 'finalForm',          name: 'Final Form',               emoji: '🏆', flavor: 'You think this is the last one. It is not.' },
+  { id: 'beyondFinal',        name: 'Beyond Final',             emoji: '🎖️', flavor: 'Past the final form. Past the credits. The real game starts here.' },
+  { id: 'afterBeyond',        name: 'After Beyond',             emoji: '🚀', flavor: 'There is something after beyond. There always is.' },
+  { id: 'closingCredits',     name: 'Closing Credits Pancake',  emoji: '🎬', flavor: 'Scrolls slowly upward, generating pancakes as it goes.' },
+  { id: 'newGamePlus',        name: 'New Game Plus Pancake',    emoji: '🎮', flavor: 'You cleared the game. The game gives you another pancake.' },
+  { id: 'speedrunPancake',    name: 'Speedrun Pancake',         emoji: '🏃', flavor: 'Cooks itself in 0.0001 seconds. Glitched, technically. Fine, mostly.' },
+  { id: 'glitchedPancake',    name: 'Glitched Pancake',         emoji: '🐛', flavor: 'Out of bounds. Producing pancakes anyway. Do not inspect.' },
+];
+
+function buildExtensions(): BuildingDef[] {
+  // Start one tier above Infinite Stack (640e18 cost, 64e12 cps).
+  let cost = 640e18 * 12;
+  let cps = 64e12 * 8;
+  return EXTENSION_META.map(m => {
+    const b: BuildingDef = { ...m, baseCost: cost, baseCps: cps };
+    cost *= 12;
+    cps *= 8;
+    return b;
+  });
+}
+
+export const BUILDINGS: BuildingDef[] = [...BASE_BUILDINGS, ...buildExtensions()];
 
 export const COST_MULTIPLIER = 1.15;
 
