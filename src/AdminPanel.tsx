@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GameState } from './useGameState';
 import { BUILDINGS, UPGRADES, CLICK_UPGRADES, formatNumber, formatCps } from './gameData';
 import { ACHIEVEMENTS } from './achievements';
@@ -22,6 +22,7 @@ interface AdminPanelProps {
   onSetClickOverride: (power: number | null) => void;
   cpsOverride: number | null;
   clickOverride: number | null;
+  clickCookie: () => void;
 }
 
 const ADMIN_PASSWORD = 'bcdm9812';
@@ -41,7 +42,19 @@ export function AdminPanel({
   setDirectState, addCookies: _addCookies, grantAllAchievements, resetSave, simulateTime,
   activateFrenzy, onForceButterPat,
   onSetCpsOverride, onSetClickOverride, cpsOverride, clickOverride,
+  clickCookie,
 }: AdminPanelProps) {
+  // Auto-clicker — fires clickCookie() 10x/sec while on. Lives outside the
+  // password gate's early return so the interval keeps running even when the
+  // panel is closed (component stays mounted, just renders null).
+  const [autoClickerOn, setAutoClickerOn] = useState(false);
+  const clickRef = useRef(clickCookie);
+  clickRef.current = clickCookie;
+  useEffect(() => {
+    if (!autoClickerOn) return;
+    const id = setInterval(() => clickRef.current(), 100);
+    return () => clearInterval(id);
+  }, [autoClickerOn]);
   const [authenticated, setAuthenticated] = useState(() => localStorage.getItem('pancake-admin-unlocked-v2') === 'true');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
@@ -250,6 +263,23 @@ export function AdminPanel({
               {cpsOverride !== null && <span className="text-pancake-gold font-bold mr-2">CpS override active: {formatNumber(cpsOverride)}/s</span>}
               {clickOverride !== null && <span className="text-pancake-gold font-bold">Click override active: {formatNumber(clickOverride)}/click</span>}
               {cpsOverride === null && clickOverride === null && 'Set custom values to override natural production. Clear to return to normal.'}
+            </p>
+          </Section>
+
+          {/* Section: Auto Clicker */}
+          <Section title="🤖 Auto Clicker" subtitle={autoClickerOn ? 'ON — clicking 10x/sec' : 'OFF'}>
+            <button
+              onClick={() => setAutoClickerOn(v => !v)}
+              className={`w-full px-4 py-3 rounded-xl border-2 font-bold cursor-pointer transition-all ${
+                autoClickerOn
+                  ? 'border-red-400 bg-red-100 text-red-700 hover:bg-red-200'
+                  : 'border-pancake-gold bg-pancake-gold text-pancake-brown hover:brightness-105'
+              }`}
+            >
+              {autoClickerOn ? 'Turn OFF' : 'Turn ON'}
+            </button>
+            <p className="text-xs text-pancake-medium mt-2">
+              This is an OP auto clicker, it clicks 10 times in one second on the pancake in the base game. Have fun!
             </p>
           </Section>
 

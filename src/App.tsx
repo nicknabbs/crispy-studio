@@ -433,6 +433,7 @@ function App() {
         onSetClickOverride={setClickOverride}
         cpsOverride={cpsOverride}
         clickOverride={clickOverride}
+        clickCookie={clickCookie}
       />
 
       <style>{`
