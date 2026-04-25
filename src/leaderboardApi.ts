@@ -32,6 +32,7 @@ export const GAME_CONFIGS: Record<string, { lowerIsBetter: boolean; label: strin
   grid:    { lowerIsBetter: false, label: 'Griddle Grid Puzzle',     format: s => `${s}` },
   blast:   { lowerIsBetter: false, label: 'Pancake Blast',           format: s => `${s}` },
   shuffle: { lowerIsBetter: false, label: 'Pancake Toppings Shuffle', format: s => `${s}` },
+  pop:     { lowerIsBetter: true,  label: 'Pancake Pop Reaction Test', format: s => `${(s/1000).toFixed(2)}s` },
 };
 
 export async function fetchLeaderboard(gameId: string, limit = 20): Promise<LeaderboardEntry[]> {

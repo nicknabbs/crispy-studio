@@ -15,6 +15,7 @@ import { MemoryGame } from './MemoryGame';
 import { GridGame } from './GridGame';
 import { BlastGame } from './BlastGame';
 import { ShuffleGame } from './ShuffleGame';
+import { PopReactionGame } from './PopReactionGame';
 import { Leaderboard } from './Leaderboard';
 import { autoSubmitScore } from './autoSubmitScore';
 
@@ -23,7 +24,7 @@ interface MiniGamesProps {
   onClose: () => void;
 }
 
-type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast' | 'shuffle';
+type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast' | 'shuffle' | 'pop';
 
 const GAMES = [
   {
@@ -122,6 +123,12 @@ const GAMES = [
     emoji: '🎩',
     description: 'Track the berry pancake under three shuffled lids. +1000 per round, keep going till you slip! A girl named Mason helped bring this mini game to life.',
   },
+  {
+    id: 'pop' as const,
+    name: 'Pancake Pop Reaction Test',
+    emoji: '⚡',
+    description: 'Wait. A tiny pancake pops up. Tap it as fast as you can. Three rounds, each smaller and faster — lowest average reaction time wins.',
+  },
 ];
 
 export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
@@ -168,6 +175,7 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   if (activeGame === 'grid') return <><GridGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'blast') return <><BlastGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
   if (activeGame === 'shuffle') return <><ShuffleGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
+  if (activeGame === 'pop') return <><PopReactionGame onBack={goBack} onScore={handleScore} /><NameModal /></>;
 
   function NameModal() {
     if (!namePrompt) return null;
