@@ -36,6 +36,8 @@ const HACKS: { key: string; label: string; desc: string }[] = [
   { key: 'pancake-hack-maze-freeze',    label: '🌀 Pancake Maze Roll',       desc: 'Freeze timer (unlimited time)' },
   { key: 'pancake-hack-memory-timer',   label: '🧠 Short Stack Memory',      desc: '30s timer — spam buttons to rack up points' },
   { key: 'pancake-hack-grid-ghost',     label: '🔲 Griddle Grid Puzzle',     desc: 'Slow drop speed' },
+  { key: 'pancake-hack-shuffle-pick',   label: '🎩 Pancake Toppings Shuffle', desc: 'Whichever tray you pick is the right one' },
+  { key: 'pancake-hack-pop-spawn',      label: '⚡ Pancake Pop Reaction Test', desc: 'Tap anywhere while waiting — pancake spawns there to tap' },
 ];
 
 export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {

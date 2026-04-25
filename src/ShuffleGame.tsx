@@ -155,6 +155,13 @@ export function ShuffleGame({ onBack, onScore }: ShuffleGameProps) {
     if (phase !== 'picking') return;
     const trayAtSlot = trays.find(t => t.position === slotPosition);
     if (!trayAtSlot) return;
+    // Hack: any tray you pick is always the right one. Also relocate the
+    // berry pancake so the reveal animation matches.
+    const cheat = localStorage.getItem('pancake-hack-shuffle-pick') === 'true';
+    if (cheat) {
+      targetRef.current = trayAtSlot.id;
+      setTargetId(trayAtSlot.id);
+    }
     const correct = trayAtSlot.id === targetRef.current;
 
     setPickedPosition(slotPosition);

@@ -115,8 +115,26 @@ export function PopReactionGame({ onBack, onScore }: PopReactionGameProps) {
   const rating: Rating | null = lastReactionMs !== null ? classifyReaction(lastReactionMs) : null;
   const newBest = phase === 'done' && reactions.length === ROUNDS && avgMs <= highBest;
 
+  // Hack handler: while waiting, a tap anywhere spawns the pancake right
+  // there so the player can immediately tap it for a near-zero reaction.
+  const handleHackSpawn = useCallback((e: React.PointerEvent) => {
+    if (phase !== 'waiting') return;
+    if (localStorage.getItem('pancake-hack-pop-spawn') !== 'true') return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    cancelTimer();
+    setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    tappedRef.current = false;
+    showTimeRef.current = performance.now();
+    setPhase('pancake');
+  }, [phase]);
+
   return (
-    <div ref={containerRef} className="fixed inset-0 z-50 bg-white overflow-hidden select-none">
+    <div
+      ref={containerRef}
+      onPointerDown={handleHackSpawn}
+      className="fixed inset-0 z-50 bg-white overflow-hidden select-none"
+    >
       {/* Minimal back button — stays out of the way */}
       <button
         onClick={onBack}
