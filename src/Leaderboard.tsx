@@ -35,7 +35,7 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
   const config = GAME_CONFIGS[activeGame];
   const myNameRaw = localStorage.getItem('pancake-player-name')?.trim() || '';
   const myName = myNameRaw.toLowerCase();
-  const isAdmin = localStorage.getItem('pancake-admin-unlocked') === 'true';
+  const isAdmin = localStorage.getItem('pancake-admin-unlocked-v2') === 'true';
   const totalPages = Math.max(1, Math.ceil(totalEntries / PAGE_SIZE));
 
   const switchGame = (id: string) => {
