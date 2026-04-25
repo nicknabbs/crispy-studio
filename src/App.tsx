@@ -62,11 +62,12 @@ function App() {
   }, []);
 
   // Auto-submit base-game stats to leaderboard every 15s when a new high is reached.
-  const baseStatsRef = useRef({ base_pancakes: 0, base_pps: 0, base_click: 0 });
+  const baseStatsRef = useRef({ base_pancakes: 0, base_pps: 0, base_click: 0, base_achievements: 0 });
   baseStatsRef.current = {
     base_pancakes: state.peakCookies,
     base_pps: baseCps,
     base_click: clickPower,
+    base_achievements: Object.keys(state.unlockedAchievements).filter(k => state.unlockedAchievements[k]).length,
   };
   useEffect(() => {
     const submit = () => submitBaseGameScoresIfBetter(baseStatsRef.current);

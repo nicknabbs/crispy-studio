@@ -15,6 +15,7 @@ export const GAME_CONFIGS: Record<string, { lowerIsBetter: boolean; label: strin
   base_pancakes: { lowerIsBetter: false, label: '🥞 Most Pancakes Ever',  format: s => formatNumber(s) },
   base_pps:      { lowerIsBetter: false, label: '⚡ Pancakes per Second', format: s => `${formatNumber(s)}/s` },
   base_click:    { lowerIsBetter: false, label: '👆 Pancakes per Click',  format: s => formatNumber(s) },
+  base_achievements: { lowerIsBetter: false, label: '🏆 Achievements Unlocked', format: s => Math.round(s).toLocaleString() },
   // Mini games
   split:   { lowerIsBetter: false, label: 'Split the Pancake',       format: s => `${s}%` },
   edge:    { lowerIsBetter: true,  label: 'Edge Slicer',             format: s => `${s}%` },
