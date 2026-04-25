@@ -39,7 +39,7 @@ const HACKS: { key: string; label: string; desc: string }[] = [
 ];
 
 export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
-  const [unlocked, setUnlocked] = useState(false);
+  const [unlocked, setUnlocked] = useState(() => localStorage.getItem('pancake-hacks-unlocked') === 'true');
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
   const [, setTick] = useState(0);
@@ -58,7 +58,6 @@ export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
   if (!isOpen) return null;
 
   const handleClose = () => {
-    setUnlocked(false);
     setPwInput('');
     setPwError(false);
     setScoreEditorMsg(null);
@@ -70,6 +69,7 @@ export function MiniGameHacks({ isOpen, onClose }: MiniGameHacksProps) {
       setUnlocked(true);
       setPwInput('');
       setPwError(false);
+      localStorage.setItem('pancake-hacks-unlocked', 'true');
     } else {
       setPwError(true);
     }

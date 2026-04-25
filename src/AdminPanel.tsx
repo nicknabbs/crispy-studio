@@ -42,7 +42,7 @@ export function AdminPanel({
   activateFrenzy, onForceButterPat,
   onSetCpsOverride, onSetClickOverride, cpsOverride, clickOverride,
 }: AdminPanelProps) {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(() => localStorage.getItem('pancake-admin-unlocked') === 'true');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
 
@@ -81,7 +81,6 @@ export function AdminPanel({
   };
 
   const handleClose = () => {
-    setAuthenticated(false);
     setPasswordInput('');
     setPasswordError(false);
     setConfirmReset(false);
