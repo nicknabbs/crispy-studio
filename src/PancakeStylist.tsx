@@ -15,7 +15,7 @@ interface PancakeStylistProps {
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
-  content: "Hi! I'm Pancake. Tell me what kind of pancake you want and I'll flip one up. Try \"rainbow sprinkles\", \"dragon fire\", or \"pizza pancake\".",
+  content: "Hi! I'm Pancake — your stylist AND game guide. I can give your pancake a new look (try \"rainbow sprinkles\" or \"dragon fire\") OR help you play (try \"what should I buy first?\" or \"how does prestige work?\"). Ask me anything!",
 };
 
 export function PancakeStylist({ isOpen, onClose, skin, onSkinChange }: PancakeStylistProps) {
@@ -119,7 +119,7 @@ export function PancakeStylist({ isOpen, onClose, skin, onSkinChange }: PancakeS
             </div>
             <div>
               <h2 className="text-lg font-bold text-pancake-brown leading-tight">Pancake</h2>
-              <p className="text-xs text-pancake-medium">Your pancake stylist</p>
+              <p className="text-xs text-pancake-medium">Your stylist & game guide</p>
             </div>
           </div>
           <button
@@ -217,7 +217,7 @@ export function PancakeStylist({ isOpen, onClose, skin, onSkinChange }: PancakeS
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder={sending ? 'Pancake is flipping…' : 'Describe your pancake…'}
+            placeholder={sending ? 'Pancake is flipping…' : 'Style your pancake or ask for a tip…'}
             disabled={sending}
             maxLength={200}
             className="flex-1 px-3 py-2 rounded-full border border-pancake-gold/40 bg-white text-pancake-brown text-sm focus:outline-none focus:border-pancake-gold disabled:opacity-60"
@@ -249,8 +249,8 @@ export function PancakeStylistButton({ onClick }: StylistButtonProps) {
                  shadow-[0_4px_0_rgba(139,105,20,0.35),0_8px_16px_rgba(0,0,0,0.15)]
                  hover:scale-110 active:scale-95 transition-transform"
       style={{ animation: 'stylist-bob 2.4s ease-in-out infinite' }}
-      title="Pancake Stylist — chat with Pancake"
-      aria-label="Open pancake stylist chat"
+      title="Pancake — stylist & game guide"
+      aria-label="Open Pancake chat"
     >
       <svg viewBox="0 0 100 100" className="w-full h-full">
         <defs>
