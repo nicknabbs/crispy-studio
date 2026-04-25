@@ -14,6 +14,7 @@ import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
 import { MiniGameHacks } from './MiniGameHacks';
 import { Leaderboard } from './Leaderboard';
+import { GalaxyPancake } from './GalaxyPancake';
 import { PancakeStylist, PancakeStylistButton } from './PancakeStylist';
 import { useSkin } from './useSkin';
 import { formatNumber, formatCps } from './gameData';
@@ -42,6 +43,7 @@ function App() {
   const [forceButterSpawn, setForceButterSpawn] = useState(0);
   const [miniGamesOpen, setMiniGamesOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [galaxyOpen, setGalaxyOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [shaking, setShaking] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
@@ -272,36 +274,46 @@ function App() {
           </div>
 
           {/* Top-right buttons */}
-          <div className="absolute top-2 right-2 flex gap-1 z-10">
-            {state.sugarStars > 0 && (
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-1 z-10">
+            <div className="flex gap-1">
+              {state.sugarStars > 0 && (
+                <button
+                  onClick={() => setMapleShopOpen(true)}
+                  className="text-lg cursor-pointer bg-transparent border-0 opacity-60 hover:opacity-100 transition-opacity"
+                  title="Maple Star Shop"
+                >
+                  🍁
+                </button>
+              )}
               <button
-                onClick={() => setMapleShopOpen(true)}
-                className="text-lg cursor-pointer bg-transparent border-0 opacity-60 hover:opacity-100 transition-opacity"
-                title="Maple Star Shop"
+                onClick={() => setLeaderboardOpen(true)}
+                className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
+                title="Leaderboard"
               >
-                🍁
+                🏆
               </button>
-            )}
+              <button
+                onClick={() => setAdminOpen(true)}
+                className="text-lg cursor-pointer bg-transparent border-0 opacity-40 hover:opacity-100 transition-opacity"
+                title="Admin Panel"
+              >
+                ⚙️
+              </button>
+              <button
+                onClick={toggleMute}
+                className="text-lg cursor-pointer bg-transparent border-0 opacity-40 hover:opacity-100 transition-opacity"
+                title={muted ? 'Unmute' : 'Mute'}
+              >
+                {muted ? '🔇' : '🔊'}
+              </button>
+            </div>
+            {/* Galaxy pancake — secret password gate to infinite pancakes */}
             <button
-              onClick={() => setLeaderboardOpen(true)}
-              className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
-              title="Leaderboard"
+              onClick={() => setGalaxyOpen(true)}
+              title="Galaxy Pancake"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-sm cursor-pointer border border-fuchsia-400/40 bg-[radial-gradient(circle_at_30%_30%,#a855f7_0%,#7c3aed_25%,#1e1b4b_60%,#000_100%)] shadow-[0_0_8px_rgba(168,85,247,0.55)] hover:scale-110 transition-transform"
             >
-              🏆
-            </button>
-            <button
-              onClick={() => setAdminOpen(true)}
-              className="text-lg cursor-pointer bg-transparent border-0 opacity-40 hover:opacity-100 transition-opacity"
-              title="Admin Panel"
-            >
-              ⚙️
-            </button>
-            <button
-              onClick={toggleMute}
-              className="text-lg cursor-pointer bg-transparent border-0 opacity-40 hover:opacity-100 transition-opacity"
-              title={muted ? 'Unmute' : 'Mute'}
-            >
-              {muted ? '🔇' : '🔊'}
+              🥞
             </button>
           </div>
 
@@ -397,6 +409,21 @@ function App() {
       <Leaderboard
         isOpen={leaderboardOpen}
         onClose={() => setLeaderboardOpen(false)}
+      />
+
+      <GalaxyPancake
+        isOpen={galaxyOpen}
+        onClose={() => setGalaxyOpen(false)}
+        onGrantInfinity={() => {
+          // 1e100 — feels infinite, stays well under double-precision overflow.
+          const inf = 1e100;
+          setDirectState({
+            cookies: inf,
+            totalBaked: Math.max(state.totalBaked, inf),
+            lifetimeBaked: Math.max(state.lifetimeBaked, inf),
+            peakCookies: Math.max(state.peakCookies, inf),
+          });
+        }}
       />
 
       <PancakeStylist
