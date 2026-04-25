@@ -292,12 +292,19 @@ function App() {
               >
                 🏆
               </button>
+              {/* The "admin" button — disguised as a cryptic </> symbol to bait
+                  the curious into trying the password. */}
               <button
                 onClick={() => setAdminOpen(true)}
-                className="text-lg cursor-pointer bg-transparent border-0 opacity-40 hover:opacity-100 transition-opacity"
-                title="Admin Panel"
+                className="font-mono font-extrabold text-base cursor-pointer bg-transparent border-0 opacity-65 hover:opacity-100 hover:scale-110 transition-all leading-none px-1 tracking-tighter"
+                style={{
+                  color: '#B8860B',
+                  textShadow: '0 0 8px rgba(212,160,23,0.45)',
+                  letterSpacing: '-0.05em',
+                }}
+                title="</>"
               >
-                ⚙️
+                {'</>'}
               </button>
               <button
                 onClick={toggleMute}
