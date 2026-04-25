@@ -56,6 +56,9 @@ export function getMaxBuyable(building: BuildingDef, owned: number, budget: numb
 }
 
 export function formatNumber(n: number): string {
+  // Past a googol we just call it infinity — keeps the galaxy-pancake grant
+  // from displaying "1.00e+100" and looking like a number.
+  if (n >= 1e100) return '∞';
   if (n < 1000) return Math.floor(n).toLocaleString();
   if (n < 1e6) return (n / 1e3).toFixed(1) + 'K';
   if (n < 1e9) return (n / 1e6).toFixed(1) + 'M';
