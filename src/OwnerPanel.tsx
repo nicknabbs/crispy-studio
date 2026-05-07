@@ -74,12 +74,6 @@ interface OwnerPanelProps {
   onSetClickOverride: (power: number | null) => void;
   cpsOverride: number | null;
   clickOverride: number | null;
-  hasEmailAccount: boolean;
-  isOwnerAccount: boolean;
-  ownerEmail?: string | null;
-  ownerUserId?: string | null;
-  onOpenOwnerAuth: () => void;
-  onSignOut: () => void;
 }
 
 export function OwnerPanel({
@@ -87,8 +81,6 @@ export function OwnerPanel({
   setDirectState, grantAllAchievements, resetSave, simulateTime,
   activateFrenzy, onForceButterPat,
   onSetCpsOverride, onSetClickOverride, cpsOverride, clickOverride,
-  hasEmailAccount, isOwnerAccount, ownerEmail, ownerUserId,
-  onOpenOwnerAuth, onSignOut,
 }: OwnerPanelProps) {
   // OP auto-clicker — rate so absurd we can't actually call clickCookie() that
   // many times. Instead, every tick we add the per-tick share directly to state.
@@ -459,58 +451,8 @@ export function OwnerPanel({
             </Section>
 
             {/* ==================== PLAYER MANAGEMENT ==================== */}
-            <Section
-              title="🚫 Player Management"
-              subtitle={isOwnerAccount ? '✓ Owner verified' : hasEmailAccount ? 'Owner account needs ownership claimed' : 'Sign in as owner to enable'}
-            >
-              {!hasEmailAccount && !isOwnerAccount && (
-                <div className="bg-black/30 rounded p-3 border border-fuchsia-400/30 text-sm text-fuchsia-100">
-                  <p className="mb-3">
-                    You're playing as a guest right now. To ban or unban specific players, you need to sign in
-                    as the owner account.
-                  </p>
-                  <button
-                    onClick={onOpenOwnerAuth}
-                    className="w-full py-2 rounded border-2 border-fuchsia-300 bg-fuchsia-500 text-white font-bold cursor-pointer hover:bg-fuchsia-400 transition-all"
-                  >
-                    🔑 Sign in as owner
-                  </button>
-                  <p className="mt-2 text-xs text-fuchsia-200/70">
-                    First time? Hit "Create Owner Account." After that, you'll need to run a one-line SQL command
-                    in your Supabase project to grant yourself owner privileges (it'll show up here once you sign in).
-                  </p>
-                </div>
-              )}
-              {hasEmailAccount && !isOwnerAccount && ownerUserId && (
-                <div className="bg-black/30 rounded p-3 border border-fuchsia-400/30 text-sm text-fuchsia-100">
-                  <p className="mb-1">
-                    Signed in as <span className="font-bold text-white">{ownerEmail}</span>, but this account
-                    isn't yet registered as an owner.
-                  </p>
-                  <p className="mb-2">Run this in your Supabase SQL editor (one-time per device-independent owner account):</p>
-                  <pre className="bg-black/50 rounded p-2 text-xs overflow-x-auto text-green-300">{`INSERT INTO public.app_owners (user_id)\nVALUES ('${ownerUserId}');`}</pre>
-                  <p className="mt-2 text-xs text-fuchsia-200/70">After running it, close & reopen this panel.</p>
-                  <button
-                    onClick={onSignOut}
-                    className="mt-3 w-full py-2 rounded border-2 border-red-300 bg-red-50 text-red-600 font-bold text-sm cursor-pointer hover:bg-red-100"
-                  >
-                    Sign out (back to guest)
-                  </button>
-                </div>
-              )}
-              {isOwnerAccount && (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between bg-black/30 rounded p-2 border border-green-400/30 text-xs">
-                    <span className="text-fuchsia-100">
-                      Signed in as <span className="font-bold text-white">{ownerEmail}</span>
-                    </span>
-                    <button
-                      onClick={onSignOut}
-                      className="px-2 py-1 rounded border border-red-300 bg-red-50/90 text-red-700 font-bold cursor-pointer hover:bg-red-100"
-                    >
-                      Sign out
-                    </button>
-                  </div>
+            <Section title="🚫 Player Management" subtitle="Ban / unban by display name">
+              <div className="flex flex-col gap-3">
                   <input
                     type="text"
                     value={banNameInput}
@@ -533,13 +475,12 @@ export function OwnerPanel({
                         setBanBusy(true);
                         setBanMsg(null);
                         try {
-                          const { data, error } = await supabase.rpc('ban_player_by_name', {
+                          const { error } = await supabase.rpc('ban_name', {
                             p_name: banNameInput.trim(),
                             p_reason: banReasonInput.trim() || null,
                           });
                           if (error) throw error;
-                          const targetId = (data as { user_id?: string } | null)?.user_id;
-                          setBanMsg({ kind: 'ok', text: `Banned ${banNameInput.trim()} (${targetId?.slice(0, 8)}…).` });
+                          setBanMsg({ kind: 'ok', text: `Banned "${banNameInput.trim()}".` });
                           setBanNameInput('');
                           setBanReasonInput('');
                         } catch (err) {
@@ -558,12 +499,11 @@ export function OwnerPanel({
                         setBanBusy(true);
                         setBanMsg(null);
                         try {
-                          const { data, error } = await supabase.rpc('unban_player_by_name', {
+                          const { error } = await supabase.rpc('unban_name', {
                             p_name: banNameInput.trim(),
                           });
                           if (error) throw error;
-                          const targetId = (data as { user_id?: string } | null)?.user_id;
-                          setBanMsg({ kind: 'ok', text: `Unbanned ${banNameInput.trim()} (${targetId?.slice(0, 8)}…).` });
+                          setBanMsg({ kind: 'ok', text: `Unbanned "${banNameInput.trim()}".` });
                         } catch (err) {
                           setBanMsg({ kind: 'err', text: err instanceof Error ? err.message : String(err) });
                         } finally {
@@ -581,11 +521,10 @@ export function OwnerPanel({
                     </p>
                   )}
                   <p className="text-xs text-fuchsia-200/70">
-                    Banned users see a "🚫 You are banned" screen on next load and can't play. Unban removes them from the list.
-                    Note: a banned player can sign out & play as guest — banning is account-level, not device-level.
+                    Banned names see a "🚫 You are banned" screen on next load and can't play under that name.
+                    Bypassable by picking a new name — this is honor-system enforcement, not foolproof.
                   </p>
                 </div>
-              )}
             </Section>
 
             {/* ==================== MINI-GAME CHEATS ==================== */}

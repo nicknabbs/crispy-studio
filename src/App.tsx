@@ -19,7 +19,7 @@ import { GalaxyPancake } from './GalaxyPancake';
 import { PancakeStylist, PancakeStylistButton } from './PancakeStylist';
 import Toast from './Toast';
 import { useAuth } from './useAuth';
-import { AuthModal, BanScreen } from './AuthModal';
+import { BanScreen } from './AuthModal';
 import { DisplayNameModal } from './DisplayNameModal';
 import { useSkin } from './useSkin';
 import { formatNumber, formatCps } from './gameData';
@@ -54,7 +54,6 @@ function App() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [muted, setMutedState] = useState(false);
   const [stylistOpen, setStylistOpen] = useState(false);
-  const [ownerAuthOpen, setOwnerAuthOpen] = useState(false);
   const { skin, setSkin } = useSkin();
   const auth = useAuth();
 
@@ -437,12 +436,6 @@ function App() {
         onSetClickOverride={setClickOverride}
         cpsOverride={cpsOverride}
         clickOverride={clickOverride}
-        hasEmailAccount={!!auth.session && !auth.isAnonymous && !!auth.user?.email}
-        isOwnerAccount={auth.isOwner}
-        ownerEmail={auth.user?.email ?? null}
-        ownerUserId={auth.user?.id ?? null}
-        onOpenOwnerAuth={() => { setOwnerOpen(false); setOwnerAuthOpen(true); }}
-        onSignOut={auth.signOut}
       />
 
       <LiveEventsOverlay />
@@ -453,16 +446,14 @@ function App() {
         onSubmit={auth.claimDisplayName}
       />
 
-      <AuthModal
-        isOpen={ownerAuthOpen}
-        onClose={() => setOwnerAuthOpen(false)}
-        onSignIn={auth.signIn}
-        onSignUp={auth.signUp}
-        initialDisplayName={auth.profile?.display_name ?? ''}
-      />
-
       {auth.ban.banned && (
-        <BanScreen reason={auth.ban.reason} onSignOut={auth.signOut} />
+        <BanScreen
+          reason={auth.ban.reason}
+          onSignOut={() => {
+            try { localStorage.removeItem('pancake-player-name'); } catch { /* ignore */ }
+            auth.signOut().finally(() => window.location.reload());
+          }}
+        />
       )}
 
       <Leaderboard

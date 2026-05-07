@@ -53,7 +53,7 @@ export function DisplayNameModal({ isOpen, initialName, onSubmit }: DisplayNameM
             className="px-3 py-3 rounded-lg border-2 border-pancake-gold/40 bg-white text-pancake-brown font-medium outline-none focus:border-pancake-gold text-base"
           />
           <p className="text-xs text-pancake-medium">
-            Letters, numbers, spaces, hyphens, underscores.
+            Letters, numbers, spaces, hyphens, underscores, and @.
           </p>
           {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
           <button

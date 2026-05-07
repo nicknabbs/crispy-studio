@@ -27,7 +27,7 @@ const PLAYER_NAME_KEY = 'pancake-player-name';
 
 function isValidDisplayName(name: string): boolean {
   if (name.length < 3 || name.length > 20) return false;
-  return /^[A-Za-z0-9 _\-]+$/.test(name);
+  return /^[A-Za-z0-9 _\-@]+$/.test(name);
 }
 
 const BAN_CACHE_KEY = 'pancake-ban-cache-v1';
@@ -84,17 +84,34 @@ export function useAuth(): AuthState & {
     return row as PlayerProfile;
   }, []);
 
+  const checkBanByName = useCallback(async (name: string | null | undefined): Promise<BanInfo> => {
+    if (!name || !name.trim()) return { banned: false };
+    const { data, error } = await supabase
+      .from('banned_names')
+      .select('reason')
+      .eq('name_lower', name.trim().toLowerCase())
+      .maybeSingle();
+    if (error || !data) return { banned: false };
+    return { banned: true, reason: (data as { reason?: string | null }).reason ?? null };
+  }, []);
+
   const loadAuxData = useCallback(async (sess: Session | null) => {
+    // Ban check is name-based now, so it works whether or not there's a session.
+    const localName = (() => {
+      try { return localStorage.getItem(PLAYER_NAME_KEY)?.trim() || null; } catch { return null; }
+    })();
+
     if (!sess) {
       setProfile(null);
-      setBan({ banned: false });
       setIsOwner(false);
-      writeBanCache({ banned: false });
+      const banInfo = await checkBanByName(localName);
+      setBan(banInfo);
+      writeBanCache(banInfo);
       return;
     }
-    const [profileRes, banRes, ownerRes] = await Promise.all([
+
+    const [profileRes, ownerRes] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name').eq('user_id', sess.user.id).maybeSingle(),
-      supabase.rpc('am_i_banned'),
       supabase.rpc('is_owner'),
     ]);
     let prof = (profileRes.data as PlayerProfile | null) ?? null;
@@ -105,13 +122,13 @@ export function useAuth(): AuthState & {
     if (prof?.display_name) {
       try { localStorage.setItem(PLAYER_NAME_KEY, prof.display_name); } catch { /* ignore */ }
     }
-    const banInfo: BanInfo = banRes.data
-      ? { banned: !!(banRes.data as { banned: boolean }).banned, reason: (banRes.data as { reason?: string }).reason ?? null }
-      : { banned: false };
+    setIsOwner(!!ownerRes.data);
+
+    const effectiveName = prof?.display_name ?? localName;
+    const banInfo = await checkBanByName(effectiveName);
     setBan(banInfo);
     writeBanCache(banInfo);
-    setIsOwner(!!ownerRes.data);
-  }, [tryAutoCreateProfileFromLocalStorage]);
+  }, [tryAutoCreateProfileFromLocalStorage, checkBanByName]);
 
   useEffect(() => {
     let mounted = true;
@@ -174,7 +191,11 @@ export function useAuth(): AuthState & {
     if (!row) throw new Error('Could not save profile.');
     setProfile(row as PlayerProfile);
     try { localStorage.setItem(PLAYER_NAME_KEY, trimmed); } catch { /* ignore */ }
-  }, []);
+    // Re-run ban check against the new name.
+    const banInfo = await checkBanByName(trimmed);
+    setBan(banInfo);
+    writeBanCache(banInfo);
+  }, [checkBanByName]);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     const trimmed = displayName.trim();

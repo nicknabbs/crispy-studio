@@ -144,7 +144,7 @@ export function BanScreen({ reason, onSignOut }: BanScreenProps) {
         <div className="text-6xl mb-3">🚫</div>
         <h1 className="text-2xl font-extrabold text-red-600 mb-2">You are banned</h1>
         <p className="text-sm text-pancake-brown mb-4">
-          The owner has banned this account from Pancake Stack.
+          The owner has banned this name from Pancake Stack.
         </p>
         {reason && (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3 mb-4 text-left">
@@ -153,13 +153,13 @@ export function BanScreen({ reason, onSignOut }: BanScreenProps) {
           </div>
         )}
         <p className="text-xs text-pancake-medium mb-4">
-          Think this is a mistake? Reach out to the owner. You can sign out and play as a guest, but your banned account stays banned.
+          Think this is a mistake? Reach out to the owner. You can pick a different name and keep playing.
         </p>
         <button
           onClick={onSignOut}
           className="w-full py-3 rounded-xl border-2 border-pancake-gold bg-pancake-gold text-pancake-brown font-bold cursor-pointer hover:brightness-105"
         >
-          Sign out
+          Pick a different name
         </button>
       </div>
     </div>
