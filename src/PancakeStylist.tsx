@@ -15,7 +15,7 @@ interface PancakeStylistProps {
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
-  content: "Hi! I'm Pancake — your stylist AND game guide. I can give your pancake a new look (try \"rainbow sprinkles\" or \"dragon fire\") OR help you play (try \"what should I buy first?\" or \"how does prestige work?\"). Ask me anything!",
+  content: "Hi! I'm Pancake — your stylist AND game guide. I can give your pancake a new look (try \"rainbow sprinkles\" or \"dragon fire\"), put your name on it (try \"put John on my pancake\"), OR help you play (try \"what should I buy first?\"). Ask me anything!",
 };
 
 export function PancakeStylist({ isOpen, onClose, skin, onSkinChange }: PancakeStylistProps) {
@@ -41,7 +41,7 @@ export function PancakeStylist({ isOpen, onClose, skin, onSkinChange }: PancakeS
   if (!isOpen) return null;
 
   const previewSkin = skin ?? DEFAULT_SKIN;
-  const { pattern, topping } = renderSkinLayers(previewSkin, 'preview');
+  const { pattern, topping, text } = renderSkinLayers(previewSkin, 'preview');
 
   const send = async () => {
     const text = input.trim();
@@ -161,6 +161,7 @@ export function PancakeStylist({ isOpen, onClose, skin, onSkinChange }: PancakeS
               </g>
               {pattern}
               {topping}
+              {text}
             </svg>
           </div>
           <div className="flex-1 min-w-0">

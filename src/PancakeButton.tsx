@@ -34,7 +34,7 @@ export function PancakeButton({
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const activeSkin = skin ?? DEFAULT_SKIN;
-  const { base, pattern, topping } = renderSkinLayers(activeSkin, 'big');
+  const { base, pattern, topping, text } = renderSkinLayers(activeSkin, 'big');
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     onClick();
@@ -106,6 +106,7 @@ export function PancakeButton({
           {base}
           {pattern}
           {topping}
+          {text}
         </svg>
 
         {particles.map(p => (

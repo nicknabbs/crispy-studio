@@ -24,6 +24,17 @@ export interface PancakeSkin {
   pattern: SkinPattern;
   patternColor?: string;
   glow?: string;
+  text?: string;
+}
+
+const TEXT_MAX_LEN = 12;
+const TEXT_ALLOWED = /[^\p{L}\p{N} '\-]/gu;
+
+export function sanitizePancakeText(input: unknown): string | undefined {
+  if (typeof input !== 'string') return undefined;
+  const stripped = input.replace(TEXT_ALLOWED, '').replace(/\s+/g, ' ').trim();
+  if (!stripped) return undefined;
+  return Array.from(stripped).slice(0, TEXT_MAX_LEN).join('');
 }
 
 export const DEFAULT_SKIN: PancakeSkin = {
@@ -79,6 +90,7 @@ export function sanitizeSkin(input: unknown): PancakeSkin | null {
     pattern,
     patternColor: isHex(s.patternColor) ? (s.patternColor as string) : undefined,
     glow: isHex(s.glow) ? (s.glow as string) : undefined,
+    text: sanitizePancakeText(s.text),
   };
 }
 
@@ -86,6 +98,7 @@ interface Layers {
   base: ReactElement;
   pattern: ReactElement | null;
   topping: ReactElement | null;
+  text: ReactElement | null;
 }
 
 const SPRINKLE_COLORS = ['#E53935', '#FB8C00', '#FDD835', '#43A047', '#1E88E5', '#8E24AA'];
@@ -113,8 +126,34 @@ export function renderSkinLayers(skin: PancakeSkin, keyPrefix = 'skin'): Layers 
 
   const pattern = renderPattern(skin, `${keyPrefix}-pattern`);
   const topping = renderTopping(skin, `${keyPrefix}-topping`);
+  const text = renderText(skin, `${keyPrefix}-text`);
 
-  return { base, pattern, topping };
+  return { base, pattern, topping, text };
+}
+
+function renderText(skin: PancakeSkin, key: string): ReactElement | null {
+  if (!skin.text) return null;
+  const len = Array.from(skin.text).length;
+  const fontSize = len <= 5 ? 32 : len <= 8 ? 26 : 22;
+  return (
+    <g key={key}>
+      <text
+        x="100"
+        y="100"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+        fontWeight="700"
+        fontSize={fontSize}
+        fill="#4A3728"
+        style={{ paintOrder: 'stroke' }}
+        stroke="#FFF3D0"
+        strokeWidth="0.6"
+      >
+        {skin.text}
+      </text>
+    </g>
+  );
 }
 
 function renderPattern(skin: PancakeSkin, key: string): ReactElement | null {

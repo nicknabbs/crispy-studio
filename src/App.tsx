@@ -12,10 +12,14 @@ import { StatsPanel } from './StatsPanel';
 import { AdminPanel } from './AdminPanel';
 import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
-import { MiniGameHacks } from './MiniGameHacks';
+import { OwnerPanel } from './OwnerPanel';
+import { LiveEventsOverlay } from './LiveEventsOverlay';
 import { Leaderboard } from './Leaderboard';
 import { GalaxyPancake } from './GalaxyPancake';
 import { PancakeStylist, PancakeStylistButton } from './PancakeStylist';
+import Toast from './Toast';
+import { useAuth } from './useAuth';
+import { AuthModal, BanScreen } from './AuthModal';
 import { useSkin } from './useSkin';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
@@ -38,7 +42,7 @@ function App() {
   } = useGameState();
   const [showWelcome, setShowWelcome] = useState(offlineCookies > 0);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [miniGameHacksOpen, setMiniGameHacksOpen] = useState(false);
+  const [ownerOpen, setOwnerOpen] = useState(false);
   const [mapleShopOpen, setMapleShopOpen] = useState(false);
   const [forceButterSpawn, setForceButterSpawn] = useState(0);
   const [miniGamesOpen, setMiniGamesOpen] = useState(false);
@@ -49,7 +53,9 @@ function App() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [muted, setMutedState] = useState(false);
   const [stylistOpen, setStylistOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const { skin, setSkin } = useSkin();
+  const auth = useAuth();
 
   // Init audio on first interaction
   useEffect(() => {
@@ -205,9 +211,7 @@ function App() {
 
         {/* Toast notification */}
         {toast && (
-          <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 bg-pancake-gold text-pancake-brown font-bold px-6 py-3 rounded-full shadow-lg text-sm md:text-base animate-bounce whitespace-nowrap">
-            {toast}
-          </div>
+          <Toast key={toast} message={toast} onDismiss={() => setToast(null)} />
         )}
 
         {/* Milestone celebration */}
@@ -255,20 +259,12 @@ function App() {
             <div className="absolute bottom-10 right-10 text-6xl">🥞</div>
           </div>
 
-          {/* Mini games + hacks buttons (top left) */}
+          {/* Mini games button (top left) */}
           <div className="absolute top-2 left-2 flex gap-1 z-10">
             <button
               onClick={() => setMiniGamesOpen(true)}
               className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
               title="Mini Games"
-            >
-              🎮
-            </button>
-            <button
-              onClick={() => setMiniGameHacksOpen(true)}
-              className="glitch-btn text-lg cursor-pointer bg-transparent border-0 opacity-60 hover:opacity-100 transition-opacity"
-              title="Mini Game Hacks"
-              data-text="🎮"
             >
               🎮
             </button>
@@ -293,6 +289,19 @@ function App() {
               >
                 🏆
               </button>
+              <button
+                onClick={() => {
+                  if (auth.session) {
+                    auth.signOut();
+                  } else {
+                    setAuthOpen(true);
+                  }
+                }}
+                className="text-base cursor-pointer bg-transparent border-0 opacity-55 hover:opacity-100 transition-opacity"
+                title={auth.session ? `Signed in as ${auth.profile?.display_name ?? auth.user?.email ?? 'user'} — click to sign out` : 'Sign in / create account'}
+              >
+                {auth.session ? '👤' : '🔑'}
+              </button>
               {/* The "admin" button — disguised as a cryptic </> symbol to bait
                   the curious into trying the password. */}
               <button
@@ -304,6 +313,20 @@ function App() {
                   letterSpacing: '-0.05em',
                 }}
                 title="</>"
+              >
+                {'</>'}
+              </button>
+              {/* The glitchy </> — owner panel. Same shape as the admin button
+                  so the curious see them as a pair. */}
+              <button
+                onClick={() => setOwnerOpen(true)}
+                className="glitch-btn font-mono font-extrabold text-base cursor-pointer bg-transparent border-0 opacity-65 hover:opacity-100 hover:scale-110 transition-all leading-none px-1 tracking-tighter"
+                style={{
+                  color: '#B8860B',
+                  letterSpacing: '-0.05em',
+                }}
+                title="</>"
+                data-text="</>"
               >
                 {'</>'}
               </button>
@@ -409,10 +432,42 @@ function App() {
         onClose={() => setMiniGamesOpen(false)}
       />
 
-      <MiniGameHacks
-        isOpen={miniGameHacksOpen}
-        onClose={() => setMiniGameHacksOpen(false)}
+      <OwnerPanel
+        isOpen={ownerOpen}
+        onClose={() => setOwnerOpen(false)}
+        state={state}
+        cps={cps}
+        clickPower={clickPower}
+        frenzyMult={frenzyMult}
+        setDirectState={setDirectState}
+        grantAllAchievements={grantAllAchievements}
+        resetSave={resetSave}
+        simulateTime={simulateTime}
+        activateFrenzy={activateFrenzy}
+        onForceButterPat={() => setForceButterSpawn(n => n + 1)}
+        onSetCpsOverride={setCpsOverride}
+        onSetClickOverride={setClickOverride}
+        cpsOverride={cpsOverride}
+        clickOverride={clickOverride}
+        signedIn={!!auth.session}
+        isOwnerAccount={auth.isOwner}
+        ownerEmail={auth.user?.email ?? null}
+        ownerUserId={auth.user?.id ?? null}
       />
+
+      <LiveEventsOverlay />
+
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSignIn={auth.signIn}
+        onSignUp={auth.signUp}
+        initialDisplayName={localStorage.getItem('pancake-player-name') ?? ''}
+      />
+
+      {auth.ban.banned && (
+        <BanScreen reason={auth.ban.reason} onSignOut={auth.signOut} />
+      )}
 
       <Leaderboard
         isOpen={leaderboardOpen}

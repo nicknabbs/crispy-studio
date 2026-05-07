@@ -27,6 +27,10 @@ interface AdminPanelProps {
 
 const ADMIN_PASSWORD = 'bcdm9812';
 
+// "Realistic" ceiling for the regular admin panel inputs.
+// 999 decillion (decillion = 10^33). Anything bigger triggers the glitch.
+const ADMIN_VALUE_CAP = 999e33;
+
 const TIME_UNITS: { label: string; seconds: number }[] = [
   { label: 'Seconds', seconds: 1 },
   { label: 'Minutes', seconds: 60 },
@@ -79,6 +83,22 @@ export function AdminPanel({
 
   // Reset confirmation
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // 999 decillion overflow glitch
+  const [overflowFlash, setOverflowFlash] = useState(false);
+  const overflowTimer = useRef<number | undefined>(undefined);
+  const flashOverflow = () => {
+    setOverflowFlash(true);
+    if (overflowTimer.current) window.clearTimeout(overflowTimer.current);
+    overflowTimer.current = window.setTimeout(() => setOverflowFlash(false), 1400);
+  };
+  const clampVal = (val: number): number => {
+    if (val > ADMIN_VALUE_CAP) {
+      flashOverflow();
+      return ADMIN_VALUE_CAP;
+    }
+    return val;
+  };
 
   if (!isOpen) return null;
 
@@ -142,8 +162,26 @@ export function AdminPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={handleClose}>
+      <style>{ADMIN_GLITCH_STYLES}</style>
+      {overflowFlash && (
+        <div className="fixed inset-0 z-[60] pointer-events-none flex items-start justify-center pt-24">
+          <div
+            className="px-6 py-3 rounded-lg font-mono font-extrabold text-sm tracking-widest"
+            style={{
+              background: '#100',
+              color: '#ff2a4a',
+              border: '2px solid #ff2a4a',
+              textShadow: '0 0 8px #ff2a4a, 0 0 2px #fff',
+              animation: 'admin-overflow-flash 1.4s ease-out',
+              boxShadow: '0 0 20px rgba(255,42,74,0.5)',
+            }}
+          >
+            ERR_OVERFLOW · MAX 999 DECILLION
+          </div>
+        </div>
+      )}
       <div
-        className="bg-pancake-cream rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        className={`bg-pancake-cream rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto ${overflowFlash ? 'admin-overflow-shake' : ''}`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -171,8 +209,9 @@ export function AdminPanel({
               />
               <button
                 onClick={() => {
-                  const val = parseFloat(pancakeInput);
-                  if (!isNaN(val) && val >= 0) {
+                  const raw = parseFloat(pancakeInput);
+                  if (!isNaN(raw) && raw >= 0) {
+                    const val = clampVal(raw);
                     setDirectState({ cookies: val, totalBaked: Math.max(state.totalBaked, val), lifetimeBaked: Math.max(state.lifetimeBaked, val) });
                     setPancakeInput('');
                   }
@@ -193,11 +232,14 @@ export function AdminPanel({
                 <QuickButton
                   key={label}
                   label={label}
-                  onClick={() => setDirectState({
-                    cookies: state.cookies + amount,
-                    totalBaked: state.totalBaked + amount,
-                    lifetimeBaked: state.lifetimeBaked + amount,
-                  })}
+                  onClick={() => {
+                    const next = clampVal(state.cookies + amount);
+                    setDirectState({
+                      cookies: next,
+                      totalBaked: Math.max(state.totalBaked, next),
+                      lifetimeBaked: Math.max(state.lifetimeBaked, next),
+                    });
+                  }}
                 />
               ))}
             </div>
@@ -218,8 +260,11 @@ export function AdminPanel({
                   />
                   <button
                     onClick={() => {
-                      const val = parseFloat(cpsInput);
-                      if (!isNaN(val) && val >= 0) { onSetCpsOverride(val); setCpsInput(''); }
+                      const raw = parseFloat(cpsInput);
+                      if (!isNaN(raw) && raw >= 0) {
+                        onSetCpsOverride(clampVal(raw));
+                        setCpsInput('');
+                      }
                     }}
                     className="px-3 py-2 rounded-lg border-2 border-pancake-gold bg-pancake-gold text-pancake-brown text-xs font-bold cursor-pointer hover:brightness-105"
                   >
@@ -244,8 +289,11 @@ export function AdminPanel({
                   />
                   <button
                     onClick={() => {
-                      const val = parseFloat(clickInput);
-                      if (!isNaN(val) && val >= 0) { onSetClickOverride(val); setClickInput(''); }
+                      const raw = parseFloat(clickInput);
+                      if (!isNaN(raw) && raw >= 0) {
+                        onSetClickOverride(clampVal(raw));
+                        setClickInput('');
+                      }
                     }}
                     className="px-3 py-2 rounded-lg border-2 border-pancake-gold bg-pancake-gold text-pancake-brown text-xs font-bold cursor-pointer hover:brightness-105"
                   >
@@ -302,8 +350,9 @@ export function AdminPanel({
                     />
                     <button
                       onClick={() => {
-                        const val = parseInt(buildingInputs[b.id] || '');
-                        if (!isNaN(val) && val >= 0) {
+                        const raw = parseInt(buildingInputs[b.id] || '');
+                        if (!isNaN(raw) && raw >= 0) {
+                          const val = Math.floor(clampVal(raw));
                           setDirectState({ buildingCounts: { ...state.buildingCounts, [b.id]: val } });
                           setBuildingInputs(prev => ({ ...prev, [b.id]: '' }));
                         }
@@ -511,6 +560,34 @@ function Section({ title, subtitle, danger, children }: {
     </div>
   );
 }
+
+const ADMIN_GLITCH_STYLES = `
+@keyframes admin-overflow-flash {
+  0%   { opacity: 0; transform: translate(0, -10px) skewX(0); }
+  10%  { opacity: 1; transform: translate(-3px, 0) skewX(-4deg); }
+  20%  { transform: translate(3px, -2px) skewX(3deg); }
+  30%  { transform: translate(-2px, 1px) skewX(-2deg); }
+  40%  { transform: translate(0, 0) skewX(0); }
+  90%  { opacity: 1; transform: translate(0, 0); }
+  100% { opacity: 0; transform: translate(0, 4px); }
+}
+@keyframes admin-overflow-shake {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(-3px, 1px); }
+  20%  { transform: translate(3px, -2px); }
+  30%  { transform: translate(-2px, 2px); }
+  40%  { transform: translate(2px, 1px); }
+  50%  { transform: translate(-3px, -1px); }
+  60%  { transform: translate(3px, 1px); }
+  70%  { transform: translate(-1px, 2px); }
+  80%  { transform: translate(2px, -2px); }
+  90%  { transform: translate(-1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+.admin-overflow-shake {
+  animation: admin-overflow-shake 0.45s linear 2;
+}
+`;
 
 function QuickButton({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
   return (
