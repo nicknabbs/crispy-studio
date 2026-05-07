@@ -20,6 +20,7 @@ import { PancakeStylist, PancakeStylistButton } from './PancakeStylist';
 import Toast from './Toast';
 import { useAuth } from './useAuth';
 import { AuthModal, BanScreen } from './AuthModal';
+import { DisplayNameModal } from './DisplayNameModal';
 import { useSkin } from './useSkin';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
@@ -53,7 +54,7 @@ function App() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [muted, setMutedState] = useState(false);
   const [stylistOpen, setStylistOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const [ownerAuthOpen, setOwnerAuthOpen] = useState(false);
   const { skin, setSkin } = useSkin();
   const auth = useAuth();
 
@@ -289,19 +290,6 @@ function App() {
               >
                 🏆
               </button>
-              <button
-                onClick={() => {
-                  if (auth.session) {
-                    auth.signOut();
-                  } else {
-                    setAuthOpen(true);
-                  }
-                }}
-                className="text-base cursor-pointer bg-transparent border-0 opacity-55 hover:opacity-100 transition-opacity"
-                title={auth.session ? `Signed in as ${auth.profile?.display_name ?? auth.user?.email ?? 'user'} — click to sign out` : 'Sign in / create account'}
-              >
-                {auth.session ? '👤' : '🔑'}
-              </button>
               {/* The "admin" button — disguised as a cryptic </> symbol to bait
                   the curious into trying the password. */}
               <button
@@ -449,20 +437,28 @@ function App() {
         onSetClickOverride={setClickOverride}
         cpsOverride={cpsOverride}
         clickOverride={clickOverride}
-        signedIn={!!auth.session}
+        hasEmailAccount={!!auth.session && !auth.isAnonymous && !!auth.user?.email}
         isOwnerAccount={auth.isOwner}
         ownerEmail={auth.user?.email ?? null}
         ownerUserId={auth.user?.id ?? null}
+        onOpenOwnerAuth={() => { setOwnerOpen(false); setOwnerAuthOpen(true); }}
+        onSignOut={auth.signOut}
       />
 
       <LiveEventsOverlay />
 
+      <DisplayNameModal
+        isOpen={!auth.loading && auth.needsDisplayName}
+        initialName={localStorage.getItem('pancake-player-name') ?? ''}
+        onSubmit={auth.claimDisplayName}
+      />
+
       <AuthModal
-        isOpen={authOpen}
-        onClose={() => setAuthOpen(false)}
+        isOpen={ownerAuthOpen}
+        onClose={() => setOwnerAuthOpen(false)}
         onSignIn={auth.signIn}
         onSignUp={auth.signUp}
-        initialDisplayName={localStorage.getItem('pancake-player-name') ?? ''}
+        initialDisplayName={auth.profile?.display_name ?? ''}
       />
 
       {auth.ban.banned && (

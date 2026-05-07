@@ -44,7 +44,10 @@ export function AuthModal({ isOpen, onClose, onSignIn, onSignUp, initialDisplayN
         onClick={e => e.stopPropagation()}
       >
         <div className="bg-pancake-warm border-b-2 border-pancake-gold/30 p-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-pancake-brown">Pancake Stack Account</h2>
+          <div>
+            <h2 className="text-lg font-bold text-pancake-brown">Owner sign-in</h2>
+            <p className="text-xs text-pancake-medium">Email-based account so ban authority works across devices.</p>
+          </div>
           <button
             onClick={onClose}
             className="text-2xl text-pancake-medium hover:text-pancake-brown cursor-pointer bg-transparent border-0 leading-none"
@@ -69,7 +72,7 @@ export function AuthModal({ isOpen, onClose, onSignIn, onSignUp, initialDisplayN
               mode === 'signup' ? 'text-pancake-brown border-b-2 border-pancake-gold' : 'text-pancake-medium'
             }`}
           >
-            Create Account
+            Create Owner Account
           </button>
         </div>
 
@@ -111,17 +114,17 @@ export function AuthModal({ isOpen, onClose, onSignIn, onSignUp, initialDisplayN
             disabled={busy || !email.trim() || !password.trim() || (mode === 'signup' && !displayName.trim())}
             className="w-full py-3 rounded-xl border-2 border-pancake-gold bg-pancake-gold text-pancake-brown font-bold cursor-pointer hover:brightness-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {busy ? '…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {busy ? '…' : mode === 'signin' ? 'Sign In' : 'Create Owner Account'}
           </button>
           <button
             onClick={onClose}
             className="w-full py-2 text-xs text-pancake-medium hover:text-pancake-brown cursor-pointer bg-transparent border-0 underline"
           >
-            Or keep playing as a guest
+            Cancel — stay as guest
           </button>
           <p className="text-xs text-pancake-medium text-center">
-            Sign in to claim leaderboard rewards & receive event gifts.<br />
-            Guests can play everything else.
+            This account is for the game's owner. Regular players don't need it —
+            they're already playing under their guest profile.
           </p>
         </div>
       </div>
