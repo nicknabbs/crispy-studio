@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { formatNumber } from './gameData';
 
 interface BossGameProps {
   onBack: () => void;
@@ -40,7 +41,9 @@ function defeatReward(level: number): number {
 }
 
 function clickDamage(dmgLevel: number): number {
-  return 1 + dmgLevel;
+  // Triangular scaling: 1st upgrade adds +1, 2nd adds +2, 3rd adds +3, …
+  // Total damage after N upgrades = 1 + (1+2+…+N) = 1 + N(N+1)/2.
+  return 1 + (dmgLevel * (dmgLevel + 1)) / 2;
 }
 
 function critChance(critLevel: number): number {
@@ -48,12 +51,14 @@ function critChance(critLevel: number): number {
 }
 
 function dmgUpgradeCost(dmgLevel: number): number {
-  return Math.ceil(10 * Math.pow(1.5, dmgLevel));
+  return Math.ceil(10 * Math.pow(1.15, dmgLevel));
 }
 
 function critUpgradeCost(critLevel: number): number {
-  return Math.ceil(15 * Math.pow(1.6, critLevel));
+  return Math.ceil(15 * Math.pow(1.4, critLevel));
 }
+
+const BUY_MAX_SAFETY = 10_000;
 
 function loadState(): BossState {
   try {
@@ -171,11 +176,46 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
     setState(prev => ({ ...prev, pp: prev.pp - cost, dmgLevel: prev.dmgLevel + 1 }));
   };
 
+  const buyDmgMax = () => {
+    setState(prev => {
+      let pp = prev.pp;
+      let dmgLevel = prev.dmgLevel;
+      let safety = 0;
+      while (safety < BUY_MAX_SAFETY) {
+        const cost = dmgUpgradeCost(dmgLevel);
+        if (pp < cost) break;
+        pp -= cost;
+        dmgLevel += 1;
+        safety += 1;
+      }
+      if (dmgLevel === prev.dmgLevel) return prev;
+      return { ...prev, pp, dmgLevel };
+    });
+  };
+
   const buyCrit = () => {
     if (crit >= CRIT_CHANCE_MAX) return;
     const cost = critUpgradeCost(state.critLevel);
     if (state.pp < cost) return;
     setState(prev => ({ ...prev, pp: prev.pp - cost, critLevel: prev.critLevel + 1 }));
+  };
+
+  const buyCritMax = () => {
+    setState(prev => {
+      let pp = prev.pp;
+      let critLevel = prev.critLevel;
+      let safety = 0;
+      while (safety < BUY_MAX_SAFETY) {
+        if (critChance(critLevel) >= CRIT_CHANCE_MAX) break;
+        const cost = critUpgradeCost(critLevel);
+        if (pp < cost) break;
+        pp -= cost;
+        critLevel += 1;
+        safety += 1;
+      }
+      if (critLevel === prev.critLevel) return prev;
+      return { ...prev, pp, critLevel };
+    });
   };
 
   const resetRun = () => {
@@ -202,10 +242,10 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
         <div className="px-4 py-2 bg-pancake-warm border-b border-shop-border/20 flex justify-between items-center text-sm">
           <div className="flex flex-col">
             <span className="font-bold text-pancake-brown">Level {state.level}</span>
-            <span className="text-[10px] text-pancake-medium">{dmg} dmg/click · {Math.round(crit * 100)}% crit</span>
+            <span className="text-[10px] text-pancake-medium">{formatNumber(dmg)} dmg/click · {Math.round(crit * 100)}% crit</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="font-bold text-pancake-brown text-base">💰 {state.pp.toLocaleString()} PP</div>
+            <div className="font-bold text-pancake-brown text-base">💰 {formatNumber(state.pp)} PP</div>
             <button
               onClick={() => setShopOpen(true)}
               className="px-3 py-1 rounded-lg bg-pancake-gold text-pancake-brown text-xs font-bold border-0 cursor-pointer hover:brightness-105"
@@ -274,7 +314,7 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
               />
             </div>
             <div className="text-center text-xs font-bold text-pancake-brown mt-1">
-              {Math.max(0, Math.ceil(state.hp)).toLocaleString()} / {maxHp.toLocaleString()} HP
+              {formatNumber(Math.max(0, Math.ceil(state.hp)))} / {formatNumber(maxHp)} HP
             </div>
           </div>
         </div>
@@ -301,10 +341,10 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
             <p className="text-pancake-brown leading-relaxed mb-2">
               {showDefeat.levelDefeated === 1
                 ? <>Congratulations, you are now moving on to level 2 boss, which will have <b>5 health</b> instead of the 1.</>
-                : <>Next up: <b>Level {showDefeat.levelDefeated + 1}</b> with <b>{bossMaxHp(showDefeat.levelDefeated + 1).toLocaleString()} HP</b>.</>}
+                : <>Next up: <b>Level {showDefeat.levelDefeated + 1}</b> with <b>{formatNumber(bossMaxHp(showDefeat.levelDefeated + 1))} HP</b>.</>}
             </p>
             <p className="text-pancake-brown mb-4">
-              You earned <span className="font-bold text-amber-600">+{showDefeat.reward.toLocaleString()} PP</span>.
+              You earned <span className="font-bold text-amber-600">+{formatNumber(showDefeat.reward)} PP</span>.
             </p>
             <button
               onClick={closeDefeat}
@@ -352,18 +392,19 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
           <div className="bg-pancake-cream rounded-2xl shadow-2xl max-w-sm w-full p-5" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-pancake-brown">🛠️ Upgrade Shop</h3>
-              <div className="font-bold text-pancake-brown">💰 {state.pp.toLocaleString()} PP</div>
+              <div className="font-bold text-pancake-brown">💰 {formatNumber(state.pp)} PP</div>
             </div>
 
             {/* Click damage */}
             <UpgradeRow
               icon="👊"
               title="Click Damage"
-              currentLabel={`${dmg} dmg/click`}
-              nextLabel={`→ ${clickDamage(state.dmgLevel + 1)} dmg/click`}
+              currentLabel={`${formatNumber(dmg)} dmg/click`}
+              nextLabel={`→ ${formatNumber(clickDamage(state.dmgLevel + 1))} dmg/click`}
               cost={dmgUpgradeCost(state.dmgLevel)}
               affordable={state.pp >= dmgUpgradeCost(state.dmgLevel)}
               onBuy={buyDmg}
+              onBuyMax={buyDmgMax}
             />
 
             {/* Crit chance */}
@@ -377,6 +418,7 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
               cost={critUpgradeCost(state.critLevel)}
               affordable={state.pp >= critUpgradeCost(state.critLevel) && crit < CRIT_CHANCE_MAX}
               onBuy={buyCrit}
+              onBuyMax={buyCritMax}
               maxed={crit >= CRIT_CHANCE_MAX}
             />
 
@@ -414,10 +456,11 @@ interface UpgradeRowProps {
   cost: number;
   affordable: boolean;
   onBuy: () => void;
+  onBuyMax: () => void;
   maxed?: boolean;
 }
 
-function UpgradeRow({ icon, title, currentLabel, nextLabel, cost, affordable, onBuy, maxed }: UpgradeRowProps) {
+function UpgradeRow({ icon, title, currentLabel, nextLabel, cost, affordable, onBuy, onBuyMax, maxed }: UpgradeRowProps) {
   return (
     <div className="rounded-xl border-2 border-shop-border bg-pancake-warm p-3 mb-3">
       <div className="flex items-start justify-between gap-2">
@@ -426,13 +469,32 @@ function UpgradeRow({ icon, title, currentLabel, nextLabel, cost, affordable, on
           <div className="text-xs text-pancake-medium">{currentLabel}</div>
           <div className="text-[11px] text-pancake-medium/80">{nextLabel}</div>
         </div>
-        <button
-          onClick={onBuy}
-          disabled={!affordable}
-          className="px-3 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-xs font-bold border-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-        >
-          {maxed ? 'MAX' : `${cost.toLocaleString()} PP`}
-        </button>
+        {maxed ? (
+          <button
+            disabled
+            className="px-3 py-2 rounded-lg bg-pancake-gold/40 text-pancake-brown text-xs font-bold border-0 cursor-not-allowed whitespace-nowrap self-start"
+          >
+            MAX
+          </button>
+        ) : (
+          <div className="flex flex-col gap-1 items-stretch min-w-[96px]">
+            <button
+              onClick={onBuy}
+              disabled={!affordable}
+              className="px-3 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-xs font-bold border-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {formatNumber(cost)} PP
+            </button>
+            <button
+              onClick={onBuyMax}
+              disabled={!affordable}
+              className="px-2 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 text-pancake-brown text-[10px] font-bold border-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
+              title="Auto-buy as many as you can afford"
+            >
+              Buy max
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
