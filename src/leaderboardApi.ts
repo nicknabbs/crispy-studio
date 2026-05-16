@@ -34,6 +34,7 @@ export const GAME_CONFIGS: Record<string, { lowerIsBetter: boolean; label: strin
   blast:   { lowerIsBetter: false, label: 'Pancake Blast',           format: s => `${s}` },
   shuffle: { lowerIsBetter: false, label: 'Pancake Toppings Shuffle', format: s => `${s}` },
   pop:     { lowerIsBetter: true,  label: 'Pancake Pop Reaction Test', format: s => `${(s/1000).toFixed(2)}s` },
+  boss:    { lowerIsBetter: false, label: 'Pancake Boss',              format: s => `Level ${s}` },
 };
 
 export async function fetchLeaderboard(gameId: string, limit = 20): Promise<LeaderboardEntry[]> {

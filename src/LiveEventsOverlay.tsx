@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { supabase } from './supabaseClient';
 
 export const LIVE_EVENT_IDS = [
   'pancake-rain',
@@ -35,6 +36,17 @@ const STORAGE_KEY = 'pancake-live-events';
 const UPDATE_EVENT = 'pancake-live-events-update';
 const SCREEN_TEXT_EVENT = 'pancake-screen-text';
 
+// Cross-client broadcast over Supabase realtime. Every player subscribes to
+// this channel on app load; the Owner Panel sends on it; remote receivers
+// apply the change locally (without re-broadcasting, to avoid echo loops).
+//
+// Trust model: anyone with the anon key can send. That's the same trust
+// model as the existing localStorage-only approach — gate access via the
+// Owner Panel password, ban abusers using the existing ban flow.
+const CHANNEL_NAME = 'pancake-live';
+const MAX_TEXT_LEN = 280;
+const MAX_TEXT_DURATION_MS = 30_000;
+
 type EventState = Record<string, boolean>;
 
 export function readLiveEvents(): EventState {
@@ -53,21 +65,85 @@ export function writeLiveEvents(state: EventState) {
   window.dispatchEvent(new CustomEvent(UPDATE_EVENT));
 }
 
-export function setLiveEvent(id: LiveEventId, on: boolean) {
+// Local-only mutators. Used by the receive handler so that inbound
+// broadcasts never trigger another outbound send.
+function setLiveEventLocal(id: LiveEventId, on: boolean) {
   const next = { ...readLiveEvents() };
   if (on) next[id] = true;
   else delete next[id];
   writeLiveEvents(next);
 }
-
-export function clearAllLiveEvents() {
+function clearAllLiveEventsLocal() {
   writeLiveEvents({});
 }
-
-export function broadcastScreenText(text: string, durationMs = 6000) {
+function popScreenTextLocal(text: string, durationMs: number) {
   window.dispatchEvent(new CustomEvent(SCREEN_TEXT_EVENT, {
     detail: { text, durationMs },
   }));
+}
+
+// Module-level channel. Subscribed once on first import; reused for every
+// send and every incoming broadcast. `broadcast.self: false` means the
+// sender won't receive their own broadcasts back (we already fire locally
+// before sending, so this avoids a double-trigger).
+const _channel = supabase.channel(CHANNEL_NAME, {
+  config: { broadcast: { self: false, ack: false } },
+});
+
+_channel.on('broadcast', { event: 'live-event' }, ({ payload }: { payload: unknown }) => {
+  const p = payload as { id?: unknown; on?: unknown } | null;
+  if (!p || typeof p.id !== 'string') return;
+  if (!(LIVE_EVENT_IDS as readonly string[]).includes(p.id)) return;
+  setLiveEventLocal(p.id as LiveEventId, !!p.on);
+});
+
+_channel.on('broadcast', { event: 'live-clear' }, () => {
+  clearAllLiveEventsLocal();
+});
+
+_channel.on('broadcast', { event: 'screen-text' }, ({ payload }: { payload: unknown }) => {
+  const p = payload as { text?: unknown; durationMs?: unknown } | null;
+  if (!p || typeof p.text !== 'string') return;
+  const text = p.text.slice(0, MAX_TEXT_LEN);
+  if (!text) return;
+  const dur = typeof p.durationMs === 'number'
+    ? Math.min(Math.max(1000, p.durationMs), MAX_TEXT_DURATION_MS)
+    : 6000;
+  popScreenTextLocal(text, dur);
+});
+
+_channel.subscribe();
+
+// Public exports — used by Owner Panel. Fire locally AND send to every
+// other connected player.
+export function setLiveEvent(id: LiveEventId, on: boolean) {
+  setLiveEventLocal(id, on);
+  _channel.send({
+    type: 'broadcast',
+    event: 'live-event',
+    payload: { id, on },
+  });
+}
+
+export function clearAllLiveEvents() {
+  clearAllLiveEventsLocal();
+  _channel.send({
+    type: 'broadcast',
+    event: 'live-clear',
+    payload: {},
+  });
+}
+
+export function broadcastScreenText(text: string, durationMs = 6000) {
+  const safe = String(text).slice(0, MAX_TEXT_LEN);
+  if (!safe) return;
+  const dur = Math.min(Math.max(1000, durationMs), MAX_TEXT_DURATION_MS);
+  popScreenTextLocal(safe, dur);
+  _channel.send({
+    type: 'broadcast',
+    event: 'screen-text',
+    payload: { text: safe, durationMs: dur },
+  });
 }
 
 export function LiveEventsOverlay() {

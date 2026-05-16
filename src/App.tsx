@@ -10,6 +10,7 @@ import { NewsTicker } from './NewsTicker';
 import { ClickPanel } from './ClickPanel';
 import { StatsPanel } from './StatsPanel';
 import { AdminPanel } from './AdminPanel';
+import { AdminPasswordChangeNotice } from './AdminPasswordChangeNotice';
 import { MapleShop } from './MapleShop';
 import { MiniGames } from './MiniGames';
 import { OwnerPanel } from './OwnerPanel';
@@ -54,7 +55,7 @@ function App() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [muted, setMutedState] = useState(false);
   const [stylistOpen, setStylistOpen] = useState(false);
-  const { skin, setSkin } = useSkin();
+  const { skin, setSkin, ownedSkinIds, addOwnedSkin } = useSkin();
   const auth = useAuth();
 
   // Init audio on first interaction
@@ -465,13 +466,15 @@ function App() {
         isOpen={galaxyOpen}
         onClose={() => setGalaxyOpen(false)}
         onGrantInfinity={() => {
-          // 1e100 — feels infinite, stays well under double-precision overflow.
-          const inf = 1e100;
+          // True Infinity. Galaxy Pancake is the ONLY path to this; the
+          // Admin Panel clamps to 999e33 and the Owner Panel rejects
+          // non-finite inputs, so no other unlock can reach this state.
+          const inf = Number.POSITIVE_INFINITY;
           setDirectState({
             cookies: inf,
-            totalBaked: Math.max(state.totalBaked, inf),
-            lifetimeBaked: Math.max(state.lifetimeBaked, inf),
-            peakCookies: Math.max(state.peakCookies, inf),
+            totalBaked: inf,
+            lifetimeBaked: inf,
+            peakCookies: inf,
           });
         }}
       />
@@ -481,6 +484,17 @@ function App() {
         onClose={() => setStylistOpen(false)}
         skin={skin}
         onSkinChange={setSkin}
+        cookies={state.cookies}
+        ownedSkinIds={ownedSkinIds}
+        onPurchase={(shopSkin) => {
+          if (state.cookies < shopSkin.price) return;
+          const nextCookies = state.cookies === Number.POSITIVE_INFINITY
+            ? Number.POSITIVE_INFINITY
+            : state.cookies - shopSkin.price;
+          setDirectState({ cookies: nextCookies });
+          addOwnedSkin(shopSkin.id);
+          setSkin(shopSkin.skin);
+        }}
       />
 
       <MapleShop
@@ -512,6 +526,8 @@ function App() {
         clickOverride={clickOverride}
         clickCookie={clickCookie}
       />
+
+      <AdminPasswordChangeNotice addCookies={addCookies} />
 
       <style>{`
         @keyframes screen-shake {

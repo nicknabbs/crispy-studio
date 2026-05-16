@@ -13,8 +13,9 @@ import {
   type LiveEventId,
 } from './LiveEventsOverlay';
 
-const OWNER_PASSWORD = 'biggiepancakeowner';
-const STORAGE_UNLOCKED = 'pancake-owner-unlocked-v1';
+const OWNER_PASSWORD = 'ifyouguessthisiwillbanyou';
+const STORAGE_UNLOCKED = 'pancake-owner-unlocked-v2';
+const STORAGE_UNLOCKED_OLD = 'pancake-owner-unlocked-v1';
 
 // Mini-game cheat catalog (moved from MiniGameHacks.tsx — same localStorage keys
 // so all the existing mini-game cheat checks keep working untouched).
@@ -35,6 +36,7 @@ const HACKS: { key: string; label: string; desc: string }[] = [
   { key: 'pancake-hack-grid-ghost',     label: '🔲 Griddle Grid Puzzle',       desc: 'Slow drop speed' },
   { key: 'pancake-hack-shuffle-pick',   label: '🎩 Pancake Toppings Shuffle',  desc: 'Whichever tray you pick is the right one' },
   { key: 'pancake-hack-pop-spawn',      label: '⚡ Pancake Pop Reaction Test', desc: 'Tap anywhere while waiting — pancake spawns there' },
+  { key: 'pancake-hack-boss-oneshot',   label: '😠 Pancake Boss',              desc: 'Every click instantly defeats the current boss' },
 ];
 
 const SCORE_KEY_OVERRIDES: Record<string, string> = {
@@ -163,6 +165,7 @@ export function OwnerPanel({
       setPwError(false);
       setPwInput('');
       localStorage.setItem(STORAGE_UNLOCKED, 'true');
+      localStorage.removeItem(STORAGE_UNLOCKED_OLD);
     } else {
       setPwError(true);
     }
@@ -265,7 +268,7 @@ export function OwnerPanel({
           <div className="p-4 flex flex-col gap-4">
 
             {/* ==================== LIVE EVENTS ==================== */}
-            <Section title="🎉 Live Events" subtitle="On your screen · stack as many as you want">
+            <Section title="🎉 Live Events" subtitle="Live on every connected player's screen · stack as many as you want">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 {LIVE_EVENT_META.map(ev => {
                   const active = !!liveEvents[ev.id];
@@ -302,7 +305,7 @@ export function OwnerPanel({
                   type="text"
                   value={screenTextInput}
                   onChange={e => setScreenTextInput(e.target.value)}
-                  placeholder="Type a screen-text message..."
+                  placeholder="Message — pops on every player's screen..."
                   className="flex-1 min-w-0 px-3 py-2 rounded-lg border-2 border-fuchsia-400/40 bg-black/40 text-white font-medium outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
                 />
                 <button
@@ -313,7 +316,7 @@ export function OwnerPanel({
                   }}
                   className="px-4 py-2 rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-white font-bold cursor-pointer hover:bg-fuchsia-400 transition-all"
                 >
-                  💬 Pop on screen
+                  💬 Broadcast
                 </button>
               </div>
 

@@ -25,7 +25,7 @@ interface AdminPanelProps {
   clickCookie: () => void;
 }
 
-const ADMIN_PASSWORD = 'bcdm9812';
+const ADMIN_PASSWORD = 'Adminjamin1417';
 
 // "Realistic" ceiling for the regular admin panel inputs.
 // 999 decillion (decillion = 10^33). Anything bigger triggers the glitch.
@@ -59,7 +59,7 @@ export function AdminPanel({
     const id = setInterval(() => clickRef.current(), 100);
     return () => clearInterval(id);
   }, [autoClickerOn]);
-  const [authenticated, setAuthenticated] = useState(() => localStorage.getItem('pancake-admin-unlocked-v2') === 'true');
+  const [authenticated, setAuthenticated] = useState(() => localStorage.getItem('pancake-admin-unlocked-v3') === 'true');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
 
@@ -107,7 +107,7 @@ export function AdminPanel({
       setAuthenticated(true);
       setPasswordError(false);
       setPasswordInput('');
-      localStorage.setItem('pancake-admin-unlocked-v2', 'true');
+      localStorage.setItem('pancake-admin-unlocked-v3', 'true');
       localStorage.removeItem('pancake-admin-unlocked');
     } else {
       setPasswordError(true);

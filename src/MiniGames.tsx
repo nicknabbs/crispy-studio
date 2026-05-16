@@ -16,6 +16,7 @@ import { GridGame } from './GridGame';
 import { BlastGame } from './BlastGame';
 import { ShuffleGame } from './ShuffleGame';
 import { PopReactionGame } from './PopReactionGame';
+import { BossGame } from './BossGame';
 import { Leaderboard } from './Leaderboard';
 import { autoSubmitScore } from './autoSubmitScore';
 
@@ -78,7 +79,7 @@ function NameModal({ open, value, onChange, onSave, onCancel }: NameModalProps) 
   );
 }
 
-type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast' | 'shuffle' | 'pop';
+type ActiveGame = null | 'split' | 'edge' | 'chopper' | 'stacker' | 'flipper' | 'catcher' | 'recipe' | 'syrup' | 'berry' | 'toss' | 'pour' | 'maze' | 'memory' | 'grid' | 'blast' | 'shuffle' | 'pop' | 'boss';
 
 const GAMES = [
   {
@@ -183,6 +184,12 @@ const GAMES = [
     emoji: '⚡',
     description: 'Wait. A tiny pancake pops up. Tap it as fast as you can. Three rounds, each smaller and faster — lowest average reaction time wins.',
   },
+  {
+    id: 'boss' as const,
+    name: 'Pancake Boss',
+    emoji: '😠',
+    description: 'Defeat the angry robo-pancake boss. Tap to attack. Spend Pancake Points on damage and accuracy upgrades. Hundreds of bosses ahead.',
+  },
 ];
 
 export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
@@ -242,6 +249,7 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   if (activeGame === 'blast') return <><BlastGame onBack={goBack} onScore={handleScore} />{modal}</>;
   if (activeGame === 'shuffle') return <><ShuffleGame onBack={goBack} onScore={handleScore} />{modal}</>;
   if (activeGame === 'pop') return <><PopReactionGame onBack={goBack} onScore={handleScore} />{modal}</>;
+  if (activeGame === 'boss') return <><BossGame onBack={goBack} onScore={handleScore} />{modal}</>;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>

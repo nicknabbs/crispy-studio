@@ -28,6 +28,24 @@ const SAVE_INTERVAL = 30000;
 const OFFLINE_RATE = 0.1;
 const MAX_OFFLINE_HOURS = 8;
 
+// JSON.stringify turns Infinity into null, which would silently zero out the
+// player's pancakes after a Galaxy Pancake unlock. Round-trip via sentinels
+// so the only "true infinite" state (Galaxy) actually persists across reloads.
+const POS_INF_SENTINEL = '__POS_INFINITY__';
+const NEG_INF_SENTINEL = '__NEG_INFINITY__';
+function jsonReplacer(_key: string, value: unknown): unknown {
+  if (typeof value === 'number') {
+    if (value === Number.POSITIVE_INFINITY) return POS_INF_SENTINEL;
+    if (value === Number.NEGATIVE_INFINITY) return NEG_INF_SENTINEL;
+  }
+  return value;
+}
+function jsonReviver(_key: string, value: unknown): unknown {
+  if (value === POS_INF_SENTINEL) return Number.POSITIVE_INFINITY;
+  if (value === NEG_INF_SENTINEL) return Number.NEGATIVE_INFINITY;
+  return value;
+}
+
 // Prestige formula: stars = floor(cbrt(lifetimeBaked / 1e9))
 // First star at 1B baked. 10 stars at 1T. 100 stars at 1Qa.
 export function calcPotentialStars(lifetimeBaked: number): number {
@@ -117,7 +135,7 @@ function loadState(): { state: GameState; offlineCookies: number } {
       }
     }
     if (!raw) return { state: defaultState(), offlineCookies: 0 };
-    const saved: GameState = { ...defaultState(), ...JSON.parse(raw) };
+    const saved: GameState = { ...defaultState(), ...JSON.parse(raw, jsonReviver) };
     const elapsed = Math.min(
       (Date.now() - saved.lastSaveTime) / 1000,
       MAX_OFFLINE_HOURS * 3600
@@ -137,7 +155,7 @@ function loadState(): { state: GameState; offlineCookies: number } {
 
 function saveState(state: GameState) {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, lastSaveTime: Date.now() }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, lastSaveTime: Date.now() }, jsonReplacer));
   } catch { /* quota exceeded */ }
 }
 
@@ -241,9 +259,14 @@ export function useGameState() {
       const owned = prev.buildingCounts[buildingId] || 0;
       const totalCost = getBulkCost(building, owned, count);
       if (prev.cookies < totalCost) return prev;
+      // Galaxy-Pancake state: cookies = Infinity. Subtracting a cost that
+      // also overflowed to Infinity would give NaN, so anchor to Infinity.
+      const nextCookies = prev.cookies === Number.POSITIVE_INFINITY
+        ? Number.POSITIVE_INFINITY
+        : prev.cookies - totalCost;
       return {
         ...prev,
-        cookies: prev.cookies - totalCost,
+        cookies: nextCookies,
         buildingCounts: {
           ...prev.buildingCounts,
           [buildingId]: owned + count,
@@ -260,9 +283,12 @@ export function useGameState() {
       if (prev.cookies < upgrade.cost) return prev;
       const owned = prev.buildingCounts[upgrade.buildingId] || 0;
       if (owned < upgrade.requiredOwned) return prev;
+      const nextCookies = prev.cookies === Number.POSITIVE_INFINITY
+        ? Number.POSITIVE_INFINITY
+        : prev.cookies - upgrade.cost;
       return {
         ...prev,
-        cookies: prev.cookies - upgrade.cost,
+        cookies: nextCookies,
         purchasedUpgrades: { ...prev.purchasedUpgrades, [upgradeId]: true },
       };
     });
@@ -276,9 +302,12 @@ export function useGameState() {
       if (prev.cookies < upgrade.cost) return prev;
       if (upgrade.requiredTotalClicks && prev.totalClicks < upgrade.requiredTotalClicks) return prev;
       if (upgrade.requiredTotalBaked && prev.totalBaked < upgrade.requiredTotalBaked) return prev;
+      const nextCookies = prev.cookies === Number.POSITIVE_INFINITY
+        ? Number.POSITIVE_INFINITY
+        : prev.cookies - upgrade.cost;
       return {
         ...prev,
-        cookies: prev.cookies - upgrade.cost,
+        cookies: nextCookies,
         purchasedClickUpgrades: { ...prev.purchasedClickUpgrades, [upgradeId]: true },
       };
     });
