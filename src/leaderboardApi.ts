@@ -9,6 +9,26 @@ export interface LeaderboardEntry {
   created_at: string;
 }
 
+// Stable per-browser player id. Generated once and persisted, then sent up
+// with every score submission so the server can follow a single player
+// across name changes (no more duplicate leaderboard rows when "John"
+// becomes "Jonathan"). Old entries that pre-date this id get linked to it
+// automatically on the next score submission OR the next rename.
+const PLAYER_ID_KEY = 'pancake-player-id';
+export function getPlayerId(): string {
+  try {
+    const existing = localStorage.getItem(PLAYER_ID_KEY);
+    if (existing && existing.length > 0) return existing;
+    const id = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : `p-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+    localStorage.setItem(PLAYER_ID_KEY, id);
+    return id;
+  } catch {
+    return '';
+  }
+}
+
 // Game configs: whether lower score is better, and how to format
 export const GAME_CONFIGS: Record<string, { lowerIsBetter: boolean; label: string; format: (s: number) => string }> = {
   // Base clicker game leaderboards first — these are the "main" game stats
@@ -96,6 +116,7 @@ export async function submitScore(gameId: string, playerName: string, score: num
     p_player_name: trimmedName,
     p_score: score,
     p_lower_is_better: lowerIsBetter,
+    p_player_id: getPlayerId() || null,
   });
 
   if (error) {
@@ -103,6 +124,30 @@ export async function submitScore(gameId: string, playerName: string, score: num
     return 'error';
   }
   return 'ok';
+}
+
+// When a player saves a new display name, rename their existing leaderboard
+// entries to the new name in one server call (rather than orphaning the old
+// rows). Returns the number of rows that were renamed.
+export async function renameLeaderboardPlayer(oldName: string, newName: string): Promise<number> {
+  const playerId = getPlayerId();
+  if (!playerId) return 0;
+  const trimmedNew = newName.trim().slice(0, 20);
+  if (!trimmedNew) return 0;
+  const trimmedOld = (oldName ?? '').trim().slice(0, 20);
+  if (trimmedNew === trimmedOld) return 0;
+
+  const { data, error } = await supabase.rpc('rename_leaderboard_player', {
+    p_old_name: trimmedOld,
+    p_new_name: trimmedNew,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Leaderboard rename error:', error);
+    return 0;
+  }
+  return typeof data === 'number' ? data : 0;
 }
 
 export async function adminSetScore(gameId: string, playerName: string, score: number): Promise<'ok' | 'error'> {

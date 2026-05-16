@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
+import { renameLeaderboardPlayer } from './leaderboardApi';
 
 export interface PlayerProfile {
   user_id: string;
@@ -120,7 +121,15 @@ export function useAuth(): AuthState & {
     }
     setProfile(prof);
     if (prof?.display_name) {
+      // If profile name differs from this device's cached name, the player
+      // probably renamed on a different device. Follow their leaderboard
+      // rows to the new name and then sync localStorage.
+      let oldLocal = '';
+      try { oldLocal = localStorage.getItem(PLAYER_NAME_KEY) ?? ''; } catch { /* ignore */ }
       try { localStorage.setItem(PLAYER_NAME_KEY, prof.display_name); } catch { /* ignore */ }
+      if (oldLocal && oldLocal !== prof.display_name) {
+        void renameLeaderboardPlayer(oldLocal, prof.display_name);
+      }
     }
     setIsOwner(!!ownerRes.data);
 
@@ -190,7 +199,11 @@ export function useAuth(): AuthState & {
     }
     if (!row) throw new Error('Could not save profile.');
     setProfile(row as PlayerProfile);
+    let oldLocal = '';
+    try { oldLocal = localStorage.getItem(PLAYER_NAME_KEY) ?? ''; } catch { /* ignore */ }
     try { localStorage.setItem(PLAYER_NAME_KEY, trimmed); } catch { /* ignore */ }
+    // Rename existing leaderboard rows to the new display name.
+    void renameLeaderboardPlayer(oldLocal, trimmed);
     // Re-run ban check against the new name.
     const banInfo = await checkBanByName(trimmed);
     setBan(banInfo);

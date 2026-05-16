@@ -19,6 +19,7 @@ import { PopReactionGame } from './PopReactionGame';
 import { BossGame } from './BossGame';
 import { Leaderboard } from './Leaderboard';
 import { autoSubmitScore } from './autoSubmitScore';
+import { renameLeaderboardPlayer } from './leaderboardApi';
 
 interface MiniGamesProps {
   isOpen: boolean;
@@ -211,8 +212,14 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
   const handleNameSubmit = () => {
     const trimmed = nameInput.trim();
     if (!trimmed || !namePrompt) return;
-    localStorage.setItem('pancake-player-name', trimmed.slice(0, 20));
-    autoSubmitScore(namePrompt.gameId, namePrompt.score);
+    const newName = trimmed.slice(0, 20);
+    const oldName = localStorage.getItem('pancake-player-name') ?? '';
+    localStorage.setItem('pancake-player-name', newName);
+    // Follow any existing leaderboard rows to the new name before we submit
+    // the next score (so the new score replaces / sits next to the right row).
+    void renameLeaderboardPlayer(oldName, newName).finally(() => {
+      autoSubmitScore(namePrompt.gameId, namePrompt.score);
+    });
     setNamePrompt(null);
   };
 

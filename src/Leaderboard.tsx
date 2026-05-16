@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchLeaderboardPage, GAME_CONFIGS, type LeaderboardEntry } from './leaderboardApi';
+import { fetchLeaderboardPage, GAME_CONFIGS, renameLeaderboardPlayer, type LeaderboardEntry } from './leaderboardApi';
 
 interface LeaderboardProps {
   isOpen: boolean;
@@ -46,9 +46,12 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
   const handleNameSave = () => {
     const trimmed = editNameInput.trim();
     if (!trimmed) return;
-    localStorage.setItem('pancake-player-name', trimmed.slice(0, 20));
+    const newName = trimmed.slice(0, 20);
+    const oldName = localStorage.getItem('pancake-player-name') ?? '';
+    localStorage.setItem('pancake-player-name', newName);
     setEditingName(false);
-    load();
+    // Follow the player's existing leaderboard rows to the new name, then refresh.
+    void renameLeaderboardPlayer(oldName, newName).then(() => load());
   };
 
   return (
