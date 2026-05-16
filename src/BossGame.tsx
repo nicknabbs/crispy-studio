@@ -41,9 +41,12 @@ function defeatReward(level: number): number {
 }
 
 function clickDamage(dmgLevel: number): number {
-  // Triangular scaling: 1st upgrade adds +1, 2nd adds +2, 3rd adds +3, …
-  // Total damage after N upgrades = 1 + (1+2+…+N) = 1 + N(N+1)/2.
-  return 1 + (dmgLevel * (dmgLevel + 1)) / 2;
+  // Each upgrade DOUBLES the bonus: 1st adds +1, 2nd +2, 3rd +4, 4th +8,
+  // 5th +16, 6th +32, … After N upgrades the total damage is 2^N.
+  // Clamp the exponent so we never tip past Number.MAX_VALUE into Infinity,
+  // which would NaN out arithmetic downstream.
+  if (dmgLevel >= 1023) return Number.MAX_VALUE;
+  return Math.pow(2, dmgLevel);
 }
 
 function critChance(critLevel: number): number {
@@ -183,6 +186,9 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
       let safety = 0;
       while (safety < BUY_MAX_SAFETY) {
         const cost = dmgUpgradeCost(dmgLevel);
+        // Stop once the cost overflows to Infinity, otherwise Infinity PP
+        // (from Galaxy) − Infinity cost = NaN and we'd corrupt the balance.
+        if (!Number.isFinite(cost)) break;
         if (pp < cost) break;
         pp -= cost;
         dmgLevel += 1;
@@ -208,6 +214,7 @@ export function BossGame({ onBack, onScore }: BossGameProps) {
       while (safety < BUY_MAX_SAFETY) {
         if (critChance(critLevel) >= CRIT_CHANCE_MAX) break;
         const cost = critUpgradeCost(critLevel);
+        if (!Number.isFinite(cost)) break;
         if (pp < cost) break;
         pp -= cost;
         critLevel += 1;
