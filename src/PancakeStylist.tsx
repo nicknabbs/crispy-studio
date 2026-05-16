@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { DEFAULT_SKIN, renderSkinLayers, type PancakeSkin } from './skinEngine';
+import { renderSkinLayers, type PancakeSkin } from './skinEngine';
 import { SHOP_SKINS, type ShopSkin } from './skinShop';
 import { formatNumber } from './gameData';
 
