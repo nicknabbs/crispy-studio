@@ -23,6 +23,7 @@ import { useAuth } from './useAuth';
 import { BanScreen } from './AuthModal';
 import { DisplayNameModal } from './DisplayNameModal';
 import { useSkin } from './useSkin';
+import { usePlayerCount } from './usePlayerCount';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
 import { submitBaseGameScoresIfBetter } from './baseGameLeaderboard';
@@ -56,6 +57,7 @@ function App() {
   const [muted, setMutedState] = useState(false);
   const [stylistOpen, setStylistOpen] = useState(false);
   const { skin, setSkin, ownedSkinIds, addOwnedSkin } = useSkin();
+  const playerCount = usePlayerCount();
   const auth = useAuth();
 
   // Init audio on first interaction
@@ -260,8 +262,8 @@ function App() {
             <div className="absolute bottom-10 right-10 text-6xl">🥞</div>
           </div>
 
-          {/* Mini games button (top left) */}
-          <div className="absolute top-2 left-2 flex gap-1 z-10">
+          {/* Mini games button + live player count (top left) */}
+          <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-10">
             <button
               onClick={() => setMiniGamesOpen(true)}
               className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
@@ -269,6 +271,12 @@ function App() {
             >
               🎮
             </button>
+            <div
+              className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm"
+              title="Live player count over Supabase Realtime"
+            >
+              🥞 <span className="font-bold">{playerCount}</span> playing · including you
+            </div>
           </div>
 
           {/* Top-right buttons */}
