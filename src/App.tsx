@@ -418,37 +418,43 @@ function App() {
             <div className="absolute bottom-10 right-10 text-6xl">🥞</div>
           </div>
 
-          {/* Top-left navigation cluster — pill buttons matching the live-
-              player and chat badges so they feel like one toolbar, not a
-              stray emoji floating in the corner. */}
+          {/* Top-left navigation. On mobile (default) these collapse to
+              icon-only chips so they don't crowd the title; labels return
+              on `sm:` screens (640px+) where there's room. The player-
+              count badge similarly drops "playing · including you" on
+              mobile, showing just "🥞 1". */}
           <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-10">
             <button
               onClick={() => setMiniGamesOpen(true)}
-              className="text-[11px] text-pancake-brown/90 bg-pancake-cream/85 backdrop-blur-sm rounded-full pl-1.5 pr-2.5 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/40 shadow-sm cursor-pointer hover:bg-pancake-cream hover:scale-105 transition-all flex items-center gap-1 font-bold"
+              className="text-[11px] text-pancake-brown/90 bg-pancake-cream/85 backdrop-blur-sm rounded-full leading-tight whitespace-nowrap border border-pancake-gold/40 shadow-sm cursor-pointer hover:bg-pancake-cream hover:scale-105 transition-all flex items-center gap-1 font-bold px-1.5 sm:pl-1.5 sm:pr-2.5 py-0.5"
               title="Mini Games — 17 quick games + leaderboards"
             >
-              <span className="text-sm">🎮</span> Mini Games
+              <span className="text-sm">🎮</span>
+              <span className="hidden sm:inline">Mini Games</span>
             </button>
             <button
               onClick={() => setGardenOpen(true)}
-              className="text-[11px] text-green-900/90 bg-green-50/85 backdrop-blur-sm rounded-full pl-1.5 pr-2.5 py-0.5 leading-tight whitespace-nowrap border border-green-400/40 shadow-sm cursor-pointer hover:bg-green-100 hover:scale-105 transition-all flex items-center gap-1 font-bold"
+              className="text-[11px] text-green-900/90 bg-green-50/85 backdrop-blur-sm rounded-full leading-tight whitespace-nowrap border border-green-400/40 shadow-sm cursor-pointer hover:bg-green-100 hover:scale-105 transition-all flex items-center gap-1 font-bold px-1.5 sm:pl-1.5 sm:pr-2.5 py-0.5"
               title="Pancake Garden — grow plants over real time for passive bonuses"
             >
-              <span className="text-sm">🌱</span> Garden
+              <span className="text-sm">🌱</span>
+              <span className="hidden sm:inline">Garden</span>
             </button>
             <button
               onClick={() => setActivePlayersOpen(true)}
               className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm cursor-pointer hover:bg-pancake-cream transition-colors"
-              title="See who's playing right now"
+              title={`${playerCount} playing right now`}
             >
-              🥞 <span className="font-bold">{playerCount}</span> playing · including you
+              🥞 <span className="font-bold">{playerCount}</span>
+              <span className="hidden sm:inline"> playing · including you</span>
             </button>
             <button
               onClick={() => setChatOpen(true)}
-              className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm cursor-pointer hover:bg-pancake-cream transition-colors"
+              className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm cursor-pointer hover:bg-pancake-cream transition-colors px-2 py-0.5 flex items-center gap-1"
               title="Open live chat"
             >
-              💬 Chat
+              <span>💬</span>
+              <span className="hidden sm:inline">Chat</span>
             </button>
           </div>
 
