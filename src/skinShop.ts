@@ -6,6 +6,13 @@ export interface ShopSkin {
   blurb: string;
   price: number;
   skin: PancakeSkin;
+  /**
+   * Limited-edition skin earned from a seasonal event — never for sale.
+   * Hidden from the shop catalog when not owned (so missed-out players
+   * don't see what they could have had). Shown with a "Limited Edition"
+   * badge when owned, and equippable like any other skin.
+   */
+  limitedEdition?: boolean;
 }
 
 // Roster of buyable pancake skins. Sorted ascending by price so the shop
@@ -621,6 +628,42 @@ export const SHOP_SKINS: ShopSkin[] = [
     blurb: 'The last pancake. After this, the simulation ends.',
     price: 1e98,
     skin: { name: 'Omega Stack', baseColor: '#000000', accentColor: '#FFFFFF', highlightColor: '#FFD700', topping: { type: 'emoji', emoji: 'Ω' }, pattern: 'stars', patternColor: '#FFFFFF', glow: '#FFD700', text: 'Ω' },
+  },
+
+  // ====================== LIMITED-EDITION HOLIDAY SKINS ======================
+  // Never for sale. Only awarded by being present during the matching
+  // seasonal event. Hidden from the shop catalog when not owned.
+  {
+    id: 'le-jack-o-lantern',
+    name: 'Jack-o\'-Lantern',
+    blurb: 'Carved-pumpkin orange with a flickering candlelight glow.',
+    price: Infinity,
+    limitedEdition: true,
+    skin: { name: 'Jack-o\'-Lantern', baseColor: '#FF7518', accentColor: '#1A1A1A', highlightColor: '#FFB347', topping: { type: 'emoji', emoji: '🎃' }, pattern: 'spots', patternColor: '#1A1A1A', glow: '#FF7518' },
+  },
+  {
+    id: 'le-frosty-gingerbread',
+    name: 'Frosty Gingerbread',
+    blurb: 'Gingerbread piped with white icing and a Christmas-tree topper.',
+    price: Infinity,
+    limitedEdition: true,
+    skin: { name: 'Frosty Gingerbread', baseColor: '#A66533', accentColor: '#FFFFFF', highlightColor: '#D4915E', topping: { type: 'emoji', emoji: '🎄' }, pattern: 'swirl', patternColor: '#FFFFFF', glow: '#F0F8FF' },
+  },
+  {
+    id: 'le-midnight-sparkle',
+    name: 'Midnight Sparkle',
+    blurb: 'A New Year sky cracking open with gold and silver fireworks.',
+    price: Infinity,
+    limitedEdition: true,
+    skin: { name: 'Midnight Sparkle', baseColor: '#1A1A2E', accentColor: '#FFD700', highlightColor: '#4A4E69', topping: { type: 'emoji', emoji: '🎆' }, pattern: 'stars', patternColor: '#FFD700', glow: '#FFD700' },
+  },
+  {
+    id: 'le-sweetheart',
+    name: 'Sweetheart Box',
+    blurb: 'Soft pink with a glittering Valentine\'s heart on top.',
+    price: Infinity,
+    limitedEdition: true,
+    skin: { name: 'Sweetheart Box', baseColor: '#FFC0CB', accentColor: '#C71585', highlightColor: '#FFB6C1', topping: { type: 'emoji', emoji: '💖' }, pattern: 'spots', patternColor: '#FF1493', glow: '#FF69B4' },
   },
 ];
 

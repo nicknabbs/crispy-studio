@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchLeaderboardPage, GAME_CONFIGS, renameLeaderboardPlayer, type LeaderboardEntry } from './leaderboardApi';
+import { openPlayerProfile } from './profileViewer';
 
 interface LeaderboardProps {
   isOpen: boolean;
@@ -146,9 +147,14 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
                       {rankDisplay}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className={`font-bold text-sm truncate ${isMe && isAdmin ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]' : 'text-pancake-brown'}`}>
+                      <button
+                        onClick={() => entry.player_id && openPlayerProfile(entry.player_id, entry.player_name)}
+                        disabled={!entry.player_id}
+                        className={`font-bold text-sm truncate bg-transparent border-0 p-0 text-left ${entry.player_id ? 'cursor-pointer hover:underline' : 'cursor-default'} ${isMe && isAdmin ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]' : 'text-pancake-brown'}`}
+                        title={entry.player_id ? `View ${entry.player_name}'s profile` : undefined}
+                      >
                         {entry.player_name}{isMe && isAdmin && <span className="ml-1">✦</span>}{isMe && <span className="text-pancake-medium text-xs ml-1">(you)</span>}
-                      </div>
+                      </button>
                     </div>
                     <div className="font-bold text-pancake-gold text-sm">
                       {config.format(entry.score)}

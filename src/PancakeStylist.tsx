@@ -73,22 +73,27 @@ export function PancakeStylist({
 
         {/* Shop list */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          {SHOP_SKINS.map(shopSkin => {
-            const owned = ownedSet.has(shopSkin.id);
-            const equipped = owned && skin?.name === shopSkin.skin.name;
-            const affordable = cookies >= shopSkin.price;
-            return (
-              <SkinCard
-                key={shopSkin.id}
-                shopSkin={shopSkin}
-                owned={owned}
-                equipped={equipped}
-                affordable={affordable}
-                onBuy={() => onPurchase(shopSkin)}
-                onEquip={() => onSkinChange(shopSkin.skin)}
-              />
-            );
-          })}
+          {SHOP_SKINS
+            // Hide unowned limited-edition skins so missed-event players
+            // don't see what they could have had. Owned limited skins
+            // surface normally (with a 'Limited' badge inside the card).
+            .filter(s => !s.limitedEdition || ownedSet.has(s.id))
+            .map(shopSkin => {
+              const owned = ownedSet.has(shopSkin.id);
+              const equipped = owned && skin?.name === shopSkin.skin.name;
+              const affordable = cookies >= shopSkin.price;
+              return (
+                <SkinCard
+                  key={shopSkin.id}
+                  shopSkin={shopSkin}
+                  owned={owned}
+                  equipped={equipped}
+                  affordable={affordable}
+                  onBuy={() => onPurchase(shopSkin)}
+                  onEquip={() => onSkinChange(shopSkin.skin)}
+                />
+              );
+            })}
         </div>
       </div>
     </div>
@@ -147,17 +152,22 @@ function SkinCard({ shopSkin, owned, equipped, affordable, onBuy, onEquip }: Ski
 
       {/* Name + blurb */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="font-bold text-pancake-brown text-sm truncate">{shopSkin.name}</div>
           {equipped && (
             <span className="text-[10px] font-bold uppercase tracking-wide text-pancake-brown bg-pancake-gold px-1.5 py-0.5 rounded">
               Equipped
             </span>
           )}
+          {shopSkin.limitedEdition && (
+            <span className="text-[10px] font-bold uppercase tracking-wide text-white bg-purple-600 px-1.5 py-0.5 rounded">
+              Limited
+            </span>
+          )}
         </div>
         <div className="text-[11px] text-pancake-medium leading-tight mt-0.5 line-clamp-2">{shopSkin.blurb}</div>
         <div className="text-[11px] text-pancake-medium mt-1">
-          🥞 {formatNumber(shopSkin.price)}
+          {shopSkin.limitedEdition ? '🎉 Event reward' : `🥞 ${formatNumber(shopSkin.price)}`}
         </div>
       </div>
 
@@ -179,6 +189,10 @@ function SkinCard({ shopSkin, owned, equipped, affordable, onBuy, onEquip }: Ski
               Equip
             </button>
           )
+        ) : shopSkin.limitedEdition ? (
+          // Should never render — we filter unowned limiteds out above —
+          // but guard anyway so it's never accidentally buyable.
+          <span className="text-[10px] text-purple-600 font-bold px-2">EVENT ONLY</span>
         ) : (
           <button
             onClick={onBuy}

@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BUILDINGS, UPGRADES, CLICK_UPGRADES, PRESTIGE_UPGRADES, getBulkCost, getPrestigeUpgradeEffects } from './gameData';
 import { ACHIEVEMENTS } from './achievements';
+import { GARDEN_TILE_COUNT, STARTER_SPECIES_IDS, currentGardenBonuses } from './pancakeGarden';
+
+export interface GardenTile {
+  /** Stable index 0..GARDEN_TILE_COUNT-1. Position in the grid. */
+  id: number;
+  /** Species growing here, or null for empty. */
+  speciesId: string | null;
+  /** Epoch ms when planted. Lifecycle is derived from elapsed time. */
+  plantedAt: number;
+}
+
+export interface GardenState {
+  tiles: GardenTile[];
+  /** Species the player has discovered (hybrids start hidden). */
+  discovered: Record<string, boolean>;
+}
 
 export interface GameState {
   cookies: number;
@@ -20,6 +36,11 @@ export interface GameState {
   lastSaveTime: number;
   // Sticky max of cookies ever held — survives spending and prestige
   peakCookies: number;
+  // Pancake Pass: tier keys (e.g. "tier-0", "tier-12") that have been
+  // auto-claimed. Sticky — spending pancakes never un-claims a tier.
+  pancakePassClaimed: Record<string, boolean>;
+  // Pancake Garden — tiles + discovered species. Persists across saves.
+  garden: GardenState;
 }
 
 const SAVE_KEY = 'pancake-stack-save';
@@ -74,6 +95,17 @@ function defaultState(): GameState {
     unlockedAchievements: {},
     lastSaveTime: Date.now(),
     peakCookies: 0,
+    pancakePassClaimed: {},
+    garden: defaultGarden(),
+  };
+}
+
+function defaultGarden(): GardenState {
+  return {
+    tiles: Array.from({ length: GARDEN_TILE_COUNT }, (_, id) => ({
+      id, speciesId: null, plantedAt: 0,
+    })),
+    discovered: Object.fromEntries(STARTER_SPECIES_IDS.map(id => [id, true])),
   };
 }
 
@@ -100,6 +132,8 @@ export function calcCps(state: GameState): number {
   // Apply prestige upgrade CpS bonus
   const effects = getPrestigeUpgradeEffects(state.purchasedPrestigeUpgrades);
   if (effects.cpsPercent > 0) cps *= (1 + effects.cpsPercent / 100);
+  // Pancake Garden: mature plants give a live CpS boost while alive.
+  if (currentGardenBonuses.cpsPercent > 0) cps *= (1 + currentGardenBonuses.cpsPercent / 100);
   return cps;
 }
 
@@ -120,6 +154,8 @@ export function getClickPower(state: GameState, baseCps: number = 0): number {
   // Apply prestige upgrade click bonus
   const effects = getPrestigeUpgradeEffects(state.purchasedPrestigeUpgrades);
   if (effects.clickPercent > 0) power *= (1 + effects.clickPercent / 100);
+  // Pancake Garden: mature plants give a live click bonus while alive.
+  if (currentGardenBonuses.clickPercent > 0) power *= (1 + currentGardenBonuses.clickPercent / 100);
   return Math.floor(power);
 }
 

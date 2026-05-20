@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameState } from './useGameState';
 import { BUILDINGS, UPGRADES, CLICK_UPGRADES, formatNumber, formatCps } from './gameData';
 import { ACHIEVEMENTS } from './achievements';
+import { ADMIN_PASSWORD, INFINITE_PANCAKES_PASSWORD } from './adminPasswords';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -25,7 +26,10 @@ interface AdminPanelProps {
   clickCookie: () => void;
 }
 
-const ADMIN_PASSWORD = 'Adminjamin1417';
+// Typing INFINITE_PANCAKES_PASSWORD into the admin gate doesn't unlock the
+// panel — it directly grants the redeemer an enormous pancake stash (1e100,
+// which formatNumber renders as "∞") and closes the modal.
+const INFINITE_PANCAKES_VALUE = 1e100;
 
 // "Realistic" ceiling for the regular admin panel inputs.
 // 999 decillion (decillion = 10^33). Anything bigger triggers the glitch.
@@ -109,9 +113,21 @@ export function AdminPanel({
       setPasswordInput('');
       localStorage.setItem('pancake-admin-unlocked-v3', 'true');
       localStorage.removeItem('pancake-admin-unlocked');
-    } else {
-      setPasswordError(true);
+      return;
     }
+    if (passwordInput === INFINITE_PANCAKES_PASSWORD) {
+      setDirectState({
+        cookies: INFINITE_PANCAKES_VALUE,
+        totalBaked: Math.max(state.totalBaked, INFINITE_PANCAKES_VALUE),
+        lifetimeBaked: Math.max(state.lifetimeBaked, INFINITE_PANCAKES_VALUE),
+        peakCookies: Math.max(state.peakCookies, INFINITE_PANCAKES_VALUE),
+      });
+      setPasswordInput('');
+      setPasswordError(false);
+      onClose();
+      return;
+    }
+    setPasswordError(true);
   };
 
   const handleClose = () => {

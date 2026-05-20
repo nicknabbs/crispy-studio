@@ -5,6 +5,7 @@ export interface LeaderboardEntry {
   id: number;
   game_id: string;
   player_name: string;
+  player_id: string | null;
   score: number;
   created_at: string;
 }

@@ -373,6 +373,54 @@ export const PRESTIGE_UPGRADES: PrestigeUpgradeDef[] = [
   { id: 'megaRush', name: 'Mega Rush', description: 'Butter pats find you 40% faster than ever.', emoji: '⚡', cost: 40, requires: 'luckyBreak', effects: { butterSpeedPercent: 40 } },
   { id: 'infiniteSyrup', name: 'Infinite Syrup', description: 'An eternal spring of maple syrup. +200% CpS.', emoji: '♾️', cost: 50, requires: 'cosmicBatter', effects: { cpsPercent: 200 } },
   { id: 'temporalPancake', name: 'Temporal Pancake', description: 'Pancakes from every timeline converge. +500% CpS.', emoji: '⏳', cost: 100, requires: 'infiniteSyrup', effects: { cpsPercent: 500 } },
+
+  // Tier 5 — post-endgame (~250-500 stars)
+  { id: 'mapleTsunami',     name: 'Maple Tsunami',      description: 'A roaring wave of syrup floods the kitchen. +750% CpS.',                    emoji: '🌊', cost: 250,  requires: 'temporalPancake', effects: { cpsPercent: 750 } },
+  { id: 'knockoutPunch',    name: 'Knockout Punch',     description: 'Each click sends pancakes flying. +200% click power.',                       emoji: '🥊', cost: 200,  requires: 'powerPunch',      effects: { clickPercent: 200 } },
+  { id: 'trillionaireTrust',name: 'Trillionaire Trust', description: 'Start every run with 1B pancakes already on the plate.',                     emoji: '🏦', cost: 300,  requires: 'headStart',       effects: { startPancakes: 1e9 } },
+  { id: 'butterStorm',      name: 'Butter Storm',       description: 'Butter pats fall like rain. +80% butter pat speed.',                         emoji: '🌧️', cost: 350,  requires: 'megaRush',        effects: { butterSpeedPercent: 80 } },
+  { id: 'luckyStreak',      name: 'Lucky Streak',       description: 'Lucky butter pats now pay out 5x.',                                          emoji: '🎰', cost: 400,  requires: 'richBatter',      effects: { luckyMultiplier: 5 } },
+  { id: 'eternalSugarRush', name: 'Eternal Sugar Rush', description: 'Frenzy windows last 100% longer than before.',                               emoji: '🍭', cost: 500,  requires: 'frenzyFever',     effects: { frenzyDurationPercent: 100 } },
+
+  // Tier 6 — late post-endgame (~1K-2.5K stars)
+  { id: 'pancakeSingularity', name: 'Pancake Singularity', description: 'All pancakes collapse into one infinitely dense disc. +1500% CpS.',      emoji: '🕳️', cost: 1000,  requires: 'mapleTsunami',     effects: { cpsPercent: 1500 } },
+  { id: 'atomicClick',        name: 'Atomic Click',        description: 'Splits the pancake atom with every tap. +400% click power.',             emoji: '☢️', cost: 1200,  requires: 'knockoutPunch',    effects: { clickPercent: 400 } },
+  { id: 'quadrillionStart',   name: 'Quadrillion Start',   description: 'Begin each run with 1 trillion pancakes.',                                emoji: '💸', cost: 1500,  requires: 'trillionaireTrust',effects: { startPancakes: 1e12 } },
+  { id: 'butterAvalanche',    name: 'Butter Avalanche',    description: 'A cascade of butter pats. +150% butter pat speed.',                       emoji: '🏔️', cost: 1750,  requires: 'butterStorm',      effects: { butterSpeedPercent: 150 } },
+  { id: 'megaFortune',        name: 'Mega Fortune',        description: 'Lucky butter pats now pay out 10x.',                                      emoji: '🎲', cost: 2000,  requires: 'luckyStreak',      effects: { luckyMultiplier: 10 } },
+  { id: 'permafrenzy',        name: 'Permafrenzy',         description: 'Frenzy lingers — duration tripled (+300%).',                              emoji: '💥', cost: 2500,  requires: 'eternalSugarRush', effects: { frenzyDurationPercent: 300 } },
+
+  // Tier 7 — endgame mastery (~5K-10K stars)
+  { id: 'galacticGriddle',  name: 'Galactic Griddle',  description: 'A griddle the size of a galactic core. +3000% CpS.',                          emoji: '🌠', cost: 5000,  requires: 'pancakeSingularity', effects: { cpsPercent: 3000 } },
+  { id: 'godlikeClick',     name: 'Godlike Click',     description: 'Your tap finger commands deities. +800% click power.',                        emoji: '🙏', cost: 4000,  requires: 'atomicClick',        effects: { clickPercent: 800 } },
+  { id: 'quintillionStart', name: 'Quintillion Start', description: 'Begin each run with 1 quadrillion pancakes.',                                 emoji: '💰', cost: 6000,  requires: 'quadrillionStart',   effects: { startPancakes: 1e15 } },
+  { id: 'butterHeaven',     name: 'Butter Heaven',     description: 'Butter pats stream from on high. +300% butter pat speed.',                    emoji: '☁️', cost: 5500,  requires: 'butterAvalanche',    effects: { butterSpeedPercent: 300 } },
+  { id: 'bottomlessFortune',name: 'Bottomless Fortune',description: 'Lucky butter pats pay out 20x. There is no bottom.',                          emoji: '🪙', cost: 7500,  requires: 'megaFortune',        effects: { luckyMultiplier: 20 } },
+  { id: 'eternalFrenzy',    name: 'Eternal Frenzy',    description: 'Frenzy duration goes 10x — practically permanent.',                           emoji: '⚡', cost: 10000, requires: 'permafrenzy',        effects: { frenzyDurationPercent: 900 } },
+
+  // Tier 8 — mythical (~25K-50K stars)
+  { id: 'stellarStack',     name: 'Stellar Stack',     description: 'A stack of pancakes that lights the night sky. +6000% CpS.',                  emoji: '🌟', cost: 25000, requires: 'galacticGriddle',    effects: { cpsPercent: 6000 } },
+  { id: 'clickOfCreation',  name: 'Click of Creation', description: 'Your click sparks new universes of pancake. +1600% click power.',             emoji: '🌅', cost: 22000, requires: 'godlikeClick',       effects: { clickPercent: 1600 } },
+  { id: 'sextillionStart',  name: 'Sextillion Start',  description: 'Begin each run with 1 quintillion pancakes.',                                 emoji: '🏛️', cost: 30000, requires: 'quintillionStart',   effects: { startPancakes: 1e18 } },
+  { id: 'butterCascade',    name: 'Butter Cascade',    description: 'A continuous waterfall of butter pats. +600% pat speed.',                     emoji: '💧', cost: 35000, requires: 'butterHeaven',       effects: { butterSpeedPercent: 600 } },
+  { id: 'cosmicFortune',    name: 'Cosmic Fortune',    description: 'Lucky butter pats pay 50x. The cosmos owes you a favor.',                     emoji: '🔮', cost: 40000, requires: 'bottomlessFortune',  effects: { luckyMultiplier: 50 } },
+  { id: 'infinityFrenzy',   name: 'Infinity Frenzy',   description: 'Frenzy duration goes ×20. Never stop flipping.',                              emoji: '♾️', cost: 50000, requires: 'eternalFrenzy',      effects: { frenzyDurationPercent: 1900 } },
+
+  // Tier 9 — legendary (~100K-500K stars)
+  { id: 'multiverseBatter', name: 'Multiverse Batter', description: 'Every pancake from every universe contributes. +15000% CpS.',                 emoji: '🌌', cost: 100000, requires: 'stellarStack',      effects: { cpsPercent: 15000 } },
+  { id: 'clickEternal',     name: 'Click Eternal',     description: 'Each click ripples through eternity. +4000% click power.',                    emoji: '∞',  cost: 120000, requires: 'clickOfCreation',   effects: { clickPercent: 4000 } },
+  { id: 'septillionStart',  name: 'Septillion Start',  description: 'Begin each run with 1 sextillion pancakes.',                                  emoji: '🪐', cost: 200000, requires: 'sextillionStart',   effects: { startPancakes: 1e21 } },
+  { id: 'butterMonsoon',    name: 'Butter Monsoon',    description: 'Yearly butter season, always on. +1500% pat speed.',                          emoji: '🌪️', cost: 250000, requires: 'butterCascade',     effects: { butterSpeedPercent: 1500 } },
+  { id: 'galacticFortune',  name: 'Galactic Fortune',  description: 'Lucky butter pats pay 200x. Galaxies fold to gift you.',                      emoji: '🌠', cost: 300000, requires: 'cosmicFortune',     effects: { luckyMultiplier: 200 } },
+  { id: 'foreverFrenzy',    name: 'Forever Frenzy',    description: 'Frenzy goes ×100. Practically forever.',                                      emoji: '🔥', cost: 500000, requires: 'infinityFrenzy',    effects: { frenzyDurationPercent: 9900 } },
+
+  // Tier 10 — mythic (~1M-10M stars)
+  { id: 'omnipancake',      name: 'Omnipancake',       description: 'Every kitchen in every reality, working for you. +50000% CpS.',               emoji: '👑', cost: 1000000, requires: 'multiverseBatter', effects: { cpsPercent: 50000 } },
+  { id: 'finalClick',       name: 'Final Click',       description: 'The click that ends and begins all things. +10000% click power.',             emoji: '💫', cost: 1500000, requires: 'clickEternal',     effects: { clickPercent: 10000 } },
+  { id: 'omegaStart',       name: 'Omega Start',       description: 'Begin each run with 1 octillion pancakes. Hello, lategame.',                  emoji: 'Ω',  cost: 2500000, requires: 'septillionStart',  effects: { startPancakes: 1e27 } },
+  { id: 'butterRapture',    name: 'Butter Rapture',    description: 'Butter pats arrive instantly. +5000% pat speed.',                             emoji: '✨', cost: 3500000, requires: 'butterMonsoon',    effects: { butterSpeedPercent: 5000 } },
+  { id: 'jackpotEternal',   name: 'Jackpot Eternal',   description: 'Lucky butter pats pay 1000x. The cosmos has been paid in full.',              emoji: '💎', cost: 5000000, requires: 'galacticFortune',  effects: { luckyMultiplier: 1000 } },
+  { id: 'frenzyApotheosis', name: 'Frenzy Apotheosis', description: 'Frenzy windows go ×500. The kitchen is permanently on fire.',                 emoji: '🔱', cost: 10000000, requires: 'foreverFrenzy',   effects: { frenzyDurationPercent: 49900 } },
 ];
 
 export interface PrestigeEffects {

@@ -12,8 +12,18 @@ import {
   broadcastScreenText,
   type LiveEventId,
 } from './LiveEventsOverlay';
+import { OWNER_PASSWORD } from './adminPasswords';
+import { GiftModal } from './GiftModal';
+import { ChatPanel } from './ChatPanel';
+import { getPlayerId } from './leaderboardApi';
+import { SEASONAL_EVENTS } from './seasonalEvents';
+import {
+  startSeasonalEvent,
+  endSeasonalEvent,
+  fetchActiveSeasonalEvent,
+  type ActiveSeasonalEvent,
+} from './seasonalEventsApi';
 
-const OWNER_PASSWORD = 'ifyouguessthisiwillbanyou';
 const STORAGE_UNLOCKED = 'pancake-owner-unlocked-v2';
 const STORAGE_UNLOCKED_OLD = 'pancake-owner-unlocked-v1';
 
@@ -76,6 +86,7 @@ interface OwnerPanelProps {
   onSetClickOverride: (power: number | null) => void;
   cpsOverride: number | null;
   clickOverride: number | null;
+  ownerDisplayName: string;
 }
 
 export function OwnerPanel({
@@ -83,6 +94,7 @@ export function OwnerPanel({
   setDirectState, grantAllAchievements, resetSave, simulateTime,
   activateFrenzy, onForceButterPat,
   onSetCpsOverride, onSetClickOverride, cpsOverride, clickOverride,
+  ownerDisplayName,
 }: OwnerPanelProps) {
   // OP auto-clicker — rate so absurd we can't actually call clickCookie() that
   // many times. Instead, every tick we add the per-tick share directly to state.
@@ -115,6 +127,42 @@ export function OwnerPanel({
   const [authenticated, setAuthenticated] = useState(() => localStorage.getItem(STORAGE_UNLOCKED) === 'true');
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
+  const [giftModalOpen, setGiftModalOpen] = useState(false);
+  const [activeSeasonalEvent, setActiveSeasonalEvent] = useState<ActiveSeasonalEvent | null>(null);
+  const [seasonalEventBusy, setSeasonalEventBusy] = useState<string | null>(null);
+  const [seasonalEventError, setSeasonalEventError] = useState<string | null>(null);
+
+  // Cross-device owner sign-in
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authIsAnon, setAuthIsAnon] = useState<boolean>(true);
+  const [authEmail, setAuthEmail] = useState<string>('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInputAuth, setPasswordInputAuth] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMsg, setAuthMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  useEffect(() => {
+    if (!isOpen || !authenticated) return;
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return;
+      const u = data.user;
+      setAuthUserId(u?.id ?? null);
+      setAuthIsAnon(!!u?.is_anonymous);
+      setAuthEmail(u?.email ?? '');
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, authenticated]);
+  // [tick] forces re-render every second so the active-event countdown ticks.
+  const [, setSecTick] = useState(0);
+  useEffect(() => {
+    if (!isOpen || !authenticated) return;
+    let cancelled = false;
+    fetchActiveSeasonalEvent()
+      .then(e => { if (!cancelled) setActiveSeasonalEvent(e); })
+      .catch(() => { /* ignore */ });
+    const id = window.setInterval(() => setSecTick(t => t + 1), 1000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [isOpen, authenticated]);
   const [, setTick] = useState(0);
   const bump = () => setTick(t => t + 1);
 
@@ -163,6 +211,14 @@ export function OwnerPanel({
     if (pwInput === OWNER_PASSWORD) {
       setAuthenticated(true);
       setPwError(false);
+      // Also promote this device's auth user to server-side owner.
+      // The RPC is idempotent — safe to call from every device + every unlock.
+      // (Silent fail is fine — UI access still works, but server-side
+      // actions won't until the claim succeeds.)
+      void (async () => {
+        try { await supabase.rpc('claim_owner_role', { p_password: pwInput }); }
+        catch { /* ignore */ }
+      })();
       setPwInput('');
       localStorage.setItem(STORAGE_UNLOCKED, 'true');
       localStorage.removeItem(STORAGE_UNLOCKED_OLD);
@@ -170,6 +226,17 @@ export function OwnerPanel({
       setPwError(true);
     }
   };
+
+  // If the panel was previously unlocked on this device but the server-side
+  // owner row was never created (or got cleared), re-attempt the claim on
+  // every open. Cheap network call; the RPC is idempotent.
+  useEffect(() => {
+    if (!isOpen || !authenticated) return;
+    void (async () => {
+      try { await supabase.rpc('claim_owner_role', { p_password: OWNER_PASSWORD }); }
+      catch { /* ignore */ }
+    })();
+  }, [isOpen, authenticated]);
 
   const handleClose = () => {
     setPwInput('');
@@ -286,7 +353,22 @@ export function OwnerPanel({
                         <div className="text-xs text-fuchsia-200/70 truncate">{ev.desc}</div>
                       </div>
                       <button
-                        onClick={() => { setLiveEvent(ev.id as LiveEventId, !active); bump(); }}
+                        onClick={() => {
+                          const turningOn = !active;
+                          setLiveEvent(ev.id as LiveEventId, turningOn);
+                          bump();
+                          // Drop an orange announcement in chat when an
+                          // event is enabled (not on every off-toggle).
+                          if (turningOn) {
+                            void (async () => {
+                              try {
+                                await supabase.rpc('insert_chat_announcement', {
+                                  p_text: `${ev.label} just started!`,
+                                });
+                              } catch { /* ignore */ }
+                            })();
+                          }
+                        }}
                         className={`px-3 py-1 rounded text-xs font-bold cursor-pointer border transition-all min-w-[50px] ${
                           active
                             ? 'border-green-300 bg-green-100 text-green-700'
@@ -326,6 +408,264 @@ export function OwnerPanel({
               >
                 Turn All Events Off
               </button>
+            </Section>
+
+            {/* ==================== CROSS-DEVICE OWNER SIGN-IN ==================== */}
+            <Section title="🔑 Owner Identity" subtitle="Typing the owner password already promoted this device to a real server-side owner. Email is optional — only useful if you want one credential across devices.">
+              {authUserId ? (
+                <div className="flex flex-col gap-3">
+                  <div className="text-xs text-fuchsia-200/80">
+                    Each device that types the owner password gets added to the <code className="text-fuchsia-100 bg-black/40 px-1 py-0.5 rounded">app_owners</code> table automatically. To make this phone an owner too: open the game on your phone, open this panel, type the owner password — done. Your current device's user_id:
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <code className="flex-1 min-w-0 truncate text-[11px] text-fuchsia-100 bg-black/40 border border-fuchsia-400/30 rounded px-2 py-1.5 font-mono">
+                      {authUserId}
+                    </code>
+                    <button
+                      onClick={() => { void navigator.clipboard.writeText(authUserId); setAuthMsg({ kind: 'ok', text: 'Copied to clipboard.' }); }}
+                      className="px-3 py-1.5 rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-white font-bold text-xs cursor-pointer hover:bg-fuchsia-400 whitespace-nowrap"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="text-xs">
+                    Status: {authIsAnon
+                      ? <span className="text-yellow-300 font-bold">Anonymous (device-only)</span>
+                      : <span className="text-green-300 font-bold">Email account ({authEmail})</span>}
+                  </div>
+
+                  {authIsAnon ? (
+                    <>
+                      <div className="text-[11px] text-fuchsia-200/70 mt-1 italic">
+                        Optional: add an email + password so you don't have to retype the owner password on a new device. Skipping this is fine — typing the password on each device works too.
+                      </div>
+                      <input
+                        type="email"
+                        value={emailInput}
+                        onChange={e => setEmailInput(e.target.value)}
+                        placeholder="email@example.com"
+                        className="px-3 py-2 rounded-lg border-2 border-fuchsia-400/40 bg-black/40 text-white outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
+                      />
+                      <input
+                        type="password"
+                        value={passwordInputAuth}
+                        onChange={e => setPasswordInputAuth(e.target.value)}
+                        placeholder="password (6+ chars)"
+                        className="px-3 py-2 rounded-lg border-2 border-fuchsia-400/40 bg-black/40 text-white outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
+                      />
+                      <button
+                        onClick={async () => {
+                          setAuthBusy(true);
+                          setAuthMsg(null);
+                          try {
+                            const { error } = await supabase.auth.updateUser({
+                              email: emailInput.trim(),
+                              password: passwordInputAuth,
+                            });
+                            if (error) throw error;
+                            setAuthMsg({ kind: 'ok', text: 'Done! Check your inbox for a confirmation email — once you click it, you can sign in with this email/password on your phone.' });
+                            const { data } = await supabase.auth.getUser();
+                            setAuthEmail(data.user?.email ?? emailInput.trim());
+                            setAuthIsAnon(!!data.user?.is_anonymous);
+                            setPasswordInputAuth('');
+                          } catch (e) {
+                            setAuthMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+                          } finally {
+                            setAuthBusy(false);
+                          }
+                        }}
+                        disabled={authBusy || emailInput.trim().length === 0 || passwordInputAuth.length < 6}
+                        className="px-4 py-2 rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-white font-bold cursor-pointer hover:bg-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {authBusy ? '…' : 'Upgrade to email account (keeps progress)'}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-[11px] text-green-200/80 mt-1">
+                      On your phone, open the Owner Panel and sign in with the same email + password to inherit this user_id and be recognized as owner.
+                    </div>
+                  )}
+
+                  {/* Cross-device sign-in (use this on phone after upgrading on desktop) */}
+                  <details className="mt-2">
+                    <summary className="text-xs text-fuchsia-200/70 cursor-pointer hover:text-fuchsia-200">
+                      Sign in with email on this device (use on phone)
+                    </summary>
+                    <div className="flex flex-col gap-2 mt-2">
+                      <input
+                        type="email"
+                        value={emailInput}
+                        onChange={e => setEmailInput(e.target.value)}
+                        placeholder="email@example.com"
+                        className="px-3 py-2 rounded-lg border-2 border-fuchsia-400/40 bg-black/40 text-white outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
+                      />
+                      <input
+                        type="password"
+                        value={passwordInputAuth}
+                        onChange={e => setPasswordInputAuth(e.target.value)}
+                        placeholder="password"
+                        className="px-3 py-2 rounded-lg border-2 border-fuchsia-400/40 bg-black/40 text-white outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
+                      />
+                      <button
+                        onClick={async () => {
+                          setAuthBusy(true);
+                          setAuthMsg(null);
+                          try {
+                            const { error } = await supabase.auth.signInWithPassword({
+                              email: emailInput.trim(),
+                              password: passwordInputAuth,
+                            });
+                            if (error) throw error;
+                            setAuthMsg({ kind: 'ok', text: 'Signed in. Reload the page to apply.' });
+                            const { data } = await supabase.auth.getUser();
+                            setAuthUserId(data.user?.id ?? null);
+                            setAuthIsAnon(!!data.user?.is_anonymous);
+                            setAuthEmail(data.user?.email ?? '');
+                            setPasswordInputAuth('');
+                          } catch (e) {
+                            setAuthMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
+                          } finally {
+                            setAuthBusy(false);
+                          }
+                        }}
+                        disabled={authBusy || emailInput.trim().length === 0 || passwordInputAuth.length === 0}
+                        className="px-4 py-2 rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-white font-bold cursor-pointer hover:bg-fuchsia-400 disabled:opacity-50"
+                      >
+                        {authBusy ? '…' : 'Sign in'}
+                      </button>
+                    </div>
+                  </details>
+
+                  {authMsg && (
+                    <p className={`text-xs font-medium ${authMsg.kind === 'ok' ? 'text-green-300' : 'text-red-300'}`}>{authMsg.text}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-fuchsia-200/70 text-sm">Loading auth state…</p>
+              )}
+            </Section>
+
+            {/* ==================== SEASONAL EVENTS ==================== */}
+            <Section title="🎃 Seasonal Events" subtitle="10-minute holiday events · grants a limited-edition skin to everyone playing during the window">
+              {seasonalEventError && (
+                <p className="text-red-300 text-xs mb-2">{seasonalEventError}</p>
+              )}
+              <div className="grid grid-cols-1 gap-2">
+                {SEASONAL_EVENTS.map(template => {
+                  const isThisActive = activeSeasonalEvent?.catalog_id === template.catalogId;
+                  const otherActive = activeSeasonalEvent !== null && !isThisActive;
+                  const busy = seasonalEventBusy === template.catalogId;
+                  const remaining = isThisActive && activeSeasonalEvent
+                    ? Math.max(0, new Date(activeSeasonalEvent.expires_at).getTime() - Date.now())
+                    : 0;
+                  return (
+                    <div
+                      key={template.catalogId}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg"
+                      style={{
+                        background: isThisActive
+                          ? 'rgba(255, 100, 220, 0.18)'
+                          : 'rgba(255, 220, 255, 0.06)',
+                        border: isThisActive
+                          ? '1px solid rgba(255, 100, 220, 0.7)'
+                          : '1px solid rgba(255, 100, 220, 0.25)',
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-white truncate">
+                          {template.emoji} {template.name}
+                        </div>
+                        <div className="text-[11px] text-fuchsia-200/70 truncate">
+                          {isThisActive
+                            ? `LIVE · ${formatRemainingForOwner(remaining)} · reward: ${template.rewardSkinId}`
+                            : `${Math.round(template.defaultDurationSeconds / 60)} min · reward: ${template.rewardSkinId}`}
+                        </div>
+                      </div>
+                      {isThisActive ? (
+                        <button
+                          onClick={async () => {
+                            setSeasonalEventBusy(template.catalogId);
+                            setSeasonalEventError(null);
+                            try {
+                              await endSeasonalEvent(template.catalogId);
+                              await supabase.channel('seasonal-events-bus').send({
+                                type: 'broadcast',
+                                event: 'event-ended',
+                                payload: { catalogId: template.catalogId },
+                              });
+                              setActiveSeasonalEvent(null);
+                            } catch (e) {
+                              setSeasonalEventError(e instanceof Error ? e.message : String(e));
+                            } finally {
+                              setSeasonalEventBusy(null);
+                            }
+                          }}
+                          disabled={busy}
+                          className="px-3 py-1 rounded text-xs font-bold cursor-pointer border-2 border-red-300 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          End Now
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            setSeasonalEventBusy(template.catalogId);
+                            setSeasonalEventError(null);
+                            try {
+                              await startSeasonalEvent({
+                                catalogId: template.catalogId,
+                                name: template.name,
+                                themeKeys: template.themeKeys,
+                                rewardSkinId: template.rewardSkinId,
+                                durationSeconds: template.defaultDurationSeconds,
+                              });
+                              await supabase.channel('seasonal-events-bus').send({
+                                type: 'broadcast',
+                                event: 'event-started',
+                                payload: { catalogId: template.catalogId },
+                              });
+                              // Orange announcement in chat so everyone sees
+                              // the event kicked off and remembers to play.
+                              void (async () => {
+                                try {
+                                  await supabase.rpc('insert_chat_announcement', {
+                                    p_text: `${template.emoji} ${template.name} just started! Play during the window to earn the limited-edition skin.`,
+                                  });
+                                } catch { /* ignore */ }
+                              })();
+                              const fresh = await fetchActiveSeasonalEvent();
+                              setActiveSeasonalEvent(fresh);
+                            } catch (e) {
+                              setSeasonalEventError(e instanceof Error ? e.message : String(e));
+                            } finally {
+                              setSeasonalEventBusy(null);
+                            }
+                          }}
+                          disabled={busy || otherActive}
+                          title={otherActive ? 'End the active event first' : undefined}
+                          className="px-3 py-1 rounded text-xs font-bold cursor-pointer border-2 border-fuchsia-300 bg-fuchsia-500 text-white hover:bg-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          {busy ? '…' : 'Start'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-fuchsia-200/60 mt-2">
+                Only players online during the window earn the skin. Players who weren't there see
+                a "come back next year" notice on their next visit.
+              </p>
+            </Section>
+
+            {/* ==================== LIVE CHAT ==================== */}
+            <Section title="💬 Live Chat" subtitle="What every player is saying right now · your replies show as 👑 Owner">
+              <div className="rounded-lg overflow-hidden border border-fuchsia-400/30" style={{ height: 360 }}>
+                <ChatPanel
+                  playerId={getPlayerId()}
+                  playerName={ownerDisplayName || 'Owner'}
+                  variant="owner"
+                />
+              </div>
             </Section>
 
             {/* ==================== SELF-GIFT (NO CAPS) ==================== */}
@@ -451,6 +791,20 @@ export function OwnerPanel({
                 <QuickButton label="Clear Upgrades" onClick={() => setDirectState({ purchasedUpgrades: {}, purchasedClickUpgrades: {} })} danger />
                 <QuickButton label="Clear Achievements" onClick={() => setDirectState({ unlockedAchievements: {} })} danger />
               </div>
+            </Section>
+
+            {/* ==================== GIFT TO PLAYER ==================== */}
+            <Section title="🎁 Gift a Player" subtitle="Send pancakes, buildings, upgrades, or passwords to any player by name">
+              <button
+                onClick={() => setGiftModalOpen(true)}
+                className="w-full py-3 rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-white font-extrabold text-base cursor-pointer hover:bg-fuchsia-400 transition-all"
+              >
+                🎁 Open Gift Sender
+              </button>
+              <p className="text-fuchsia-200/70 text-xs mt-2">
+                Pick a category → pick an item & amount → pick a recipient from
+                the leaderboard → confirm. They get a private notification.
+              </p>
             </Section>
 
             {/* ==================== PLAYER MANAGEMENT ==================== */}
@@ -884,8 +1238,18 @@ export function OwnerPanel({
           </div>
         </div>
       </div>
+
+      <GiftModal isOpen={giftModalOpen} onClose={() => setGiftModalOpen(false)} />
     </>
   );
+}
+
+function formatRemainingForOwner(ms: number): string {
+  if (ms <= 0) return 'expired';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function Section({ title, subtitle, danger, children }: {

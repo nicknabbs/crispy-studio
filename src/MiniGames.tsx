@@ -24,6 +24,10 @@ import { renameLeaderboardPlayer } from './leaderboardApi';
 interface MiniGamesProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Open the Pancake Garden modal (a persistent overlay rather than a
+   *  score-based mini-game). Called by the garden card here so App.tsx
+   *  can manage the overlay state. */
+  onOpenGarden?: () => void;
 }
 
 // NameModal is a stable top-level component on purpose. Defining it inside
@@ -193,7 +197,7 @@ const GAMES = [
   },
 ];
 
-export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
+export function MiniGames({ isOpen, onClose, onOpenGarden }: MiniGamesProps) {
   const [activeGame, setActiveGame] = useState<ActiveGame>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [namePrompt, setNamePrompt] = useState<{ gameId: string; score: number } | null>(null);
@@ -284,6 +288,24 @@ export function MiniGames({ isOpen, onClose }: MiniGamesProps) {
               <div className="text-xs text-pancake-medium mt-0.5">See top scores across all games</div>
             </div>
           </button>
+
+          {onOpenGarden && (
+            <button
+              onClick={() => { onOpenGarden(); onClose(); }}
+              className="flex items-center gap-4 p-4 rounded-xl border-2 border-pancake-gold bg-gradient-to-r from-pancake-warm to-pancake-cream hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all duration-150 text-left"
+            >
+              <span className="text-4xl flex-shrink-0">🌱</span>
+              <div>
+                <div className="font-bold text-pancake-brown flex items-center gap-2">
+                  Pancake Garden
+                  <span className="text-[10px] uppercase tracking-wide bg-pancake-gold/40 text-pancake-brown px-1.5 py-0.5 rounded">passive</span>
+                </div>
+                <div className="text-xs text-pancake-medium mt-0.5">
+                  Grow rare pancake plants over real time. Mature plants boost CpS, click power, and butter speed.
+                </div>
+              </div>
+            </button>
+          )}
 
           {GAMES.map(game => (
             <button

@@ -66,8 +66,11 @@ export function writeLiveEvents(state: EventState) {
 }
 
 // Local-only mutators. Used by the receive handler so that inbound
-// broadcasts never trigger another outbound send.
-function setLiveEventLocal(id: LiveEventId, on: boolean) {
+// broadcasts never trigger another outbound send. Also used by the
+// seasonal-events hook: each client independently flips themes on/off
+// based on the active event in the DB, so the event's mere presence
+// drives visuals — no broadcast needed.
+export function setLiveEventLocal(id: LiveEventId, on: boolean) {
   const next = { ...readLiveEvents() };
   if (on) next[id] = true;
   else delete next[id];

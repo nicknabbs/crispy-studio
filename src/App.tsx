@@ -22,8 +22,27 @@ import Toast from './Toast';
 import { useAuth } from './useAuth';
 import { BanScreen } from './AuthModal';
 import { DisplayNameModal } from './DisplayNameModal';
+import { ActivePlayersModal } from './ActivePlayersModal';
 import { useSkin } from './useSkin';
 import { usePlayerCount } from './usePlayerCount';
+import { usePlayerProfileSync } from './usePlayerProfileSync';
+import { useGiftInbox } from './useGiftInbox';
+import { describeGift, type ClaimedGift } from './giftsApi';
+import { getPlayerId } from './leaderboardApi';
+import { GiftNotification } from './GiftNotification';
+import { ChatDrawer } from './ChatDrawer';
+import { ProfileViewModal } from './ProfileViewModal';
+import { setProfileOpener } from './profileViewer';
+import { PeerGiftModal } from './PeerGiftModal';
+import { setPeerGiftOpener } from './peerGifter';
+import { PancakePassModal } from './PancakePassModal';
+import { PancakePassCelebration } from './PancakePassCelebration';
+import { usePancakePass } from './usePancakePass';
+import { useSeasonalEvents } from './useSeasonalEvents';
+import { EventBanner } from './EventBanner';
+import { MissedEventNotice } from './MissedEventNotice';
+import { usePancakeGarden } from './usePancakeGarden';
+import { PancakeGardenModal } from './PancakeGardenModal';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
 import { submitBaseGameScoresIfBetter } from './baseGameLeaderboard';
@@ -31,6 +50,68 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const MILESTONES = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12];
 const MILESTONE_LABELS = ['1,000', '10K', '100K', '1M', '10M', '100M', '1B', '10B', '100B', '1T'];
+
+// Apply a single inbox gift to the player's local game state. Mirrors the
+// uncapped mutations the OwnerPanel uses on itself. Passwords are display-only
+// (rendered in the GiftNotification) so they don't mutate state here.
+function applyGiftToState(
+  gift: ClaimedGift,
+  state: ReturnType<typeof useGameState>['state'],
+  setDirectState: ReturnType<typeof useGameState>['setDirectState'],
+) {
+  const p = gift.payload as Record<string, unknown>;
+  switch (gift.kind) {
+    case 'pancakes': {
+      const n = Number(p.amount);
+      if (!Number.isFinite(n) || n <= 0) return;
+      const next = state.cookies + n;
+      setDirectState({
+        cookies: next,
+        totalBaked: state.totalBaked + n,
+        lifetimeBaked: state.lifetimeBaked + n,
+        peakCookies: Math.max(state.peakCookies, next),
+      });
+      return;
+    }
+    case 'building': {
+      const id = String(p.buildingId ?? '');
+      const n = Math.floor(Number(p.amount));
+      if (!id || !Number.isFinite(n) || n <= 0) return;
+      setDirectState({
+        buildingCounts: { ...state.buildingCounts, [id]: (state.buildingCounts[id] ?? 0) + n },
+      });
+      return;
+    }
+    case 'building_upgrade': {
+      const id = String(p.upgradeId ?? '');
+      if (!id) return;
+      setDirectState({
+        purchasedUpgrades: { ...state.purchasedUpgrades, [id]: true },
+      });
+      return;
+    }
+    case 'click_upgrade': {
+      const id = String(p.upgradeId ?? '');
+      if (!id) return;
+      setDirectState({
+        purchasedClickUpgrades: { ...state.purchasedClickUpgrades, [id]: true },
+      });
+      return;
+    }
+    case 'maple_stars': {
+      const n = Math.floor(Number(p.amount));
+      if (!Number.isFinite(n) || n <= 0) return;
+      setDirectState({ sugarStars: state.sugarStars + n });
+      return;
+    }
+    case 'admin_password':
+    case 'owner_password':
+    case 'infinite_pancakes_password':
+      // No state mutation — the GiftNotification reveals the password and
+      // the recipient redeems it manually in the matching panel.
+      return;
+  }
+}
 
 function App() {
   const {
@@ -57,8 +138,83 @@ function App() {
   const [muted, setMutedState] = useState(false);
   const [stylistOpen, setStylistOpen] = useState(false);
   const { skin, setSkin, ownedSkinIds, addOwnedSkin } = useSkin();
-  const playerCount = usePlayerCount();
   const auth = useAuth();
+  const presenceLocalName = auth.profile?.display_name
+    ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('pancake-player-name') ?? undefined : undefined);
+  const presence = usePlayerCount(presenceLocalName);
+  const playerCount = presence.count;
+  const [activePlayersOpen, setActivePlayersOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [profileTarget, setProfileTarget] = useState<{ playerId: string; name?: string } | null>(null);
+  useEffect(() => {
+    setProfileOpener((playerId, fallbackName) => setProfileTarget({ playerId, name: fallbackName }));
+    return () => setProfileOpener(null);
+  }, []);
+
+  const [peerGiftPreset, setPeerGiftPreset] = useState<{ player_id: string; player_name: string } | null | undefined>(undefined);
+  // undefined = modal closed; null = open with no preset; object = open with preset.
+  useEffect(() => {
+    setPeerGiftOpener(preset => setPeerGiftPreset(preset ?? null));
+    return () => setPeerGiftOpener(null);
+  }, []);
+
+  // Pancake Pass: auto-claims any tier whose threshold is ≤ peakCookies,
+  // applies the reward through setDirectState, and queues a celebration.
+  const [passOpen, setPassOpen] = useState(false);
+  const { newlyClaimed, dismissCelebration } = usePancakePass({ state, setDirectState });
+
+  // Pancake Garden — real-time growing plot. Active passive bonuses are
+  // mirrored to a module-level ref the CpS/click calc reads.
+  const [gardenOpen, setGardenOpen] = useState(false);
+  const garden = usePancakeGarden({ state, setDirectState, cps, addCookies });
+
+  // Seasonal events: detect active event from DB, apply themes, claim
+  // reward → add the limited-edition skin to ownedSkinIds. Also surfaces
+  // events the player missed for the "come back next year" notice.
+  const { activeEvent, missedQueue, dismissMissed } = useSeasonalEvents({
+    playerId: getPlayerId(),
+    onReward: (skinId) => {
+      addOwnedSkin(skinId);
+      setToast(`🎁 You earned a limited-edition skin! Open the Pancake Stylist to equip it.`);
+      window.setTimeout(() => setToast(null), 5000);
+    },
+  });
+  const rewardClaimedForActive = activeEvent
+    ? ownedSkinIds.includes(activeEvent.reward_skin_id)
+    : false;
+
+  // First-time profile celebration: after the player claims a display name,
+  // open their own profile once so they see what others will see. Gated by
+  // localStorage so it only ever fires on the first claim.
+  const claimedName = auth.profile?.display_name;
+  useEffect(() => {
+    if (!claimedName) return;
+    try {
+      if (localStorage.getItem('pancake-profile-celebrated') === 'true') return;
+      localStorage.setItem('pancake-profile-celebrated', 'true');
+    } catch { return; }
+    setProfileTarget({ playerId: getPlayerId(), name: claimedName });
+  }, [claimedName]);
+
+  // Keep the public player profile (skin + name) in sync with the server so
+  // other players see the current values when they click this user's name.
+  usePlayerProfileSync({
+    playerId: getPlayerId(),
+    playerName: presenceLocalName ?? 'Guest',
+    skin,
+  });
+
+  // Gift inbox — claim on boot, subscribe live, queue notifications, apply.
+  // Kept in a ref-driven shape so the receiver hook closure always sees the
+  // latest state when summing existing pancakes / building counts.
+  const [giftQueue, setGiftQueue] = useState<ClaimedGift[]>([]);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const handleIncomingGift = useCallback((g: ClaimedGift) => {
+    applyGiftToState(g, stateRef.current, setDirectState);
+    setGiftQueue(q => [...q, g]);
+  }, [setDirectState]);
+  useGiftInbox({ playerId: getPlayerId(), onGift: handleIncomingGift });
 
   // Init audio on first interaction
   useEffect(() => {
@@ -262,21 +418,38 @@ function App() {
             <div className="absolute bottom-10 right-10 text-6xl">🥞</div>
           </div>
 
-          {/* Mini games button + live player count (top left) */}
+          {/* Top-left navigation cluster — pill buttons matching the live-
+              player and chat badges so they feel like one toolbar, not a
+              stray emoji floating in the corner. */}
           <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-10">
             <button
               onClick={() => setMiniGamesOpen(true)}
-              className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
-              title="Mini Games"
+              className="text-[11px] text-pancake-brown/90 bg-pancake-cream/85 backdrop-blur-sm rounded-full pl-1.5 pr-2.5 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/40 shadow-sm cursor-pointer hover:bg-pancake-cream hover:scale-105 transition-all flex items-center gap-1 font-bold"
+              title="Mini Games — 17 quick games + leaderboards"
             >
-              🎮
+              <span className="text-sm">🎮</span> Mini Games
             </button>
-            <div
-              className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm"
-              title="Live player count over Supabase Realtime"
+            <button
+              onClick={() => setGardenOpen(true)}
+              className="text-[11px] text-green-900/90 bg-green-50/85 backdrop-blur-sm rounded-full pl-1.5 pr-2.5 py-0.5 leading-tight whitespace-nowrap border border-green-400/40 shadow-sm cursor-pointer hover:bg-green-100 hover:scale-105 transition-all flex items-center gap-1 font-bold"
+              title="Pancake Garden — grow plants over real time for passive bonuses"
+            >
+              <span className="text-sm">🌱</span> Garden
+            </button>
+            <button
+              onClick={() => setActivePlayersOpen(true)}
+              className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm cursor-pointer hover:bg-pancake-cream transition-colors"
+              title="See who's playing right now"
             >
               🥞 <span className="font-bold">{playerCount}</span> playing · including you
-            </div>
+            </button>
+            <button
+              onClick={() => setChatOpen(true)}
+              className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm cursor-pointer hover:bg-pancake-cream transition-colors"
+              title="Open live chat"
+            >
+              💬 Chat
+            </button>
           </div>
 
           {/* Top-right buttons */}
@@ -291,6 +464,13 @@ function App() {
                   🍁
                 </button>
               )}
+              <button
+                onClick={() => setPassOpen(true)}
+                className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
+                title="Pancake Pass"
+              >
+                🎖️
+              </button>
               <button
                 onClick={() => setLeaderboardOpen(true)}
                 className="text-lg cursor-pointer bg-transparent border-0 opacity-50 hover:opacity-100 transition-opacity"
@@ -351,11 +531,23 @@ function App() {
             </div>
           )}
 
-          {/* Title */}
-          <h1 className="text-3xl md:text-4xl font-bold text-pancake-brown mb-1 tracking-tight">
-            Pancake Stack
+          {/* Title — Maple Star pill shrinks as the number grows so big
+              prestige counts don't blow out the header on mobile. */}
+          <h1 className="text-3xl md:text-4xl font-bold text-pancake-brown mb-1 tracking-tight flex items-baseline flex-wrap gap-2 justify-center">
+            <span>Pancake Stack</span>
             {state.sugarStars > 0 && (
-              <span className="text-lg ml-2 text-pancake-gold">({state.sugarStars} Maple Stars)</span>
+              <span
+                className={`text-pancake-gold font-bold tabular-nums whitespace-nowrap ${
+                  state.sugarStars >= 1e9   ? 'text-[10px]'
+                : state.sugarStars >= 1e6   ? 'text-xs'
+                : state.sugarStars >= 1e4   ? 'text-sm'
+                : state.sugarStars >= 1000  ? 'text-base'
+                                            : 'text-lg'
+                }`}
+                title={`${state.sugarStars.toLocaleString()} Maple Stars`}
+              >
+                🍁 {formatNumber(state.sugarStars)}
+              </span>
             )}
           </h1>
 
@@ -426,6 +618,21 @@ function App() {
       <MiniGames
         isOpen={miniGamesOpen}
         onClose={() => setMiniGamesOpen(false)}
+        onOpenGarden={() => setGardenOpen(true)}
+      />
+
+      <PancakeGardenModal
+        isOpen={gardenOpen}
+        onClose={() => setGardenOpen(false)}
+        tiles={garden.tiles}
+        bonuses={garden.bonuses}
+        discovered={state.garden?.discovered ?? {}}
+        cps={cps}
+        onPlant={garden.plant}
+        onHarvest={garden.harvest}
+        onClear={garden.clear}
+        discoveryNotice={garden.discoveryNotice}
+        onDismissDiscovery={garden.dismissDiscovery}
       />
 
       <OwnerPanel
@@ -445,6 +652,7 @@ function App() {
         onSetClickOverride={setClickOverride}
         cpsOverride={cpsOverride}
         clickOverride={clickOverride}
+        ownerDisplayName={presenceLocalName ?? 'Owner'}
       />
 
       <LiveEventsOverlay />
@@ -468,6 +676,81 @@ function App() {
       <Leaderboard
         isOpen={leaderboardOpen}
         onClose={() => setLeaderboardOpen(false)}
+      />
+
+      {activePlayersOpen && (
+        <ActivePlayersModal
+          players={presence.players}
+          onClose={() => setActivePlayersOpen(false)}
+        />
+      )}
+
+      {giftQueue.length > 0 && (
+        <GiftNotification
+          message={describeGift(giftQueue[0])}
+          remainingCount={giftQueue.length - 1}
+          onDismiss={() => setGiftQueue(q => q.slice(1))}
+        />
+      )}
+
+      <ChatDrawer
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        playerId={getPlayerId()}
+        playerName={presenceLocalName ?? 'Guest'}
+      />
+
+      <ProfileViewModal
+        isOpen={profileTarget !== null}
+        playerId={profileTarget?.playerId ?? null}
+        fallbackName={profileTarget?.name}
+        onClose={() => setProfileTarget(null)}
+      />
+
+      {activeEvent && (
+        <EventBanner event={activeEvent} rewardClaimed={rewardClaimedForActive} />
+      )}
+
+      {missedQueue.length > 0 && (
+        <MissedEventNotice
+          key={missedQueue[0].id}
+          event={missedQueue[0]}
+          remainingCount={missedQueue.length - 1}
+          onDismiss={() => dismissMissed(missedQueue[0].id)}
+        />
+      )}
+
+      <PancakePassModal
+        isOpen={passOpen}
+        onClose={() => setPassOpen(false)}
+        peakCookies={state.peakCookies}
+        claimed={state.pancakePassClaimed ?? {}}
+      />
+
+      {newlyClaimed.length > 0 && (
+        <PancakePassCelebration
+          key={newlyClaimed[0].key}
+          tier={newlyClaimed[0]}
+          onDismiss={() => dismissCelebration(newlyClaimed[0].key)}
+        />
+      )}
+
+      <PeerGiftModal
+        isOpen={peerGiftPreset !== undefined}
+        onClose={() => setPeerGiftPreset(undefined)}
+        senderPlayerId={getPlayerId()}
+        senderName={presenceLocalName ?? 'Guest'}
+        senderPancakes={state.cookies}
+        onDeduct={(amount) => {
+          const next = state.cookies - amount;
+          setDirectState({
+            cookies: next < 0 ? 0 : next,
+            // Don't reduce totalBaked / peakCookies — those track all-time
+            // achievement, not current spendable. Same convention as buying
+            // a building.
+          });
+        }}
+        presetRecipient={peerGiftPreset ?? null}
       />
 
       <GalaxyPancake
