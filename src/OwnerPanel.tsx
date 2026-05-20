@@ -163,6 +163,18 @@ export function OwnerPanel({
     const id = window.setInterval(() => setSecTick(t => t + 1), 1000);
     return () => { cancelled = true; window.clearInterval(id); };
   }, [isOpen, authenticated]);
+
+  // If the panel was previously unlocked on this device but the server-side
+  // owner row was never created (or got cleared), re-attempt the claim on
+  // every open. Cheap network call; the RPC is idempotent. MUST sit above
+  // the `if (!isOpen) return null` early return — Rules of Hooks.
+  useEffect(() => {
+    if (!isOpen || !authenticated) return;
+    void (async () => {
+      try { await supabase.rpc('claim_owner_role', { p_password: OWNER_PASSWORD }); }
+      catch { /* ignore */ }
+    })();
+  }, [isOpen, authenticated]);
   const [, setTick] = useState(0);
   const bump = () => setTick(t => t + 1);
 
@@ -226,17 +238,6 @@ export function OwnerPanel({
       setPwError(true);
     }
   };
-
-  // If the panel was previously unlocked on this device but the server-side
-  // owner row was never created (or got cleared), re-attempt the claim on
-  // every open. Cheap network call; the RPC is idempotent.
-  useEffect(() => {
-    if (!isOpen || !authenticated) return;
-    void (async () => {
-      try { await supabase.rpc('claim_owner_role', { p_password: OWNER_PASSWORD }); }
-      catch { /* ignore */ }
-    })();
-  }, [isOpen, authenticated]);
 
   const handleClose = () => {
     setPwInput('');
