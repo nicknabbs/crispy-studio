@@ -8,25 +8,41 @@ interface EventBannerProps {
   rewardClaimed: boolean;
 }
 
-// Top-of-screen banner shown while a seasonal event is active. Updates the
-// countdown every second. Auto-disappears when expires_at passes (the
-// caller stops rendering us as soon as the hook flips activeEvent to null).
+// Top-of-screen countdown shown while a seasonal event is active. Updates the
+// countdown every second and auto-disappears when expires_at passes. The
+// banner is click-through (pointer-events-none) so it never blocks the UI
+// underneath — only its little ✕ dismiss button is interactive. Dismissal is
+// remembered per-event so it stays hidden for the rest of that event.
+const DISMISS_KEY = 'pancake-event-banner-dismissed-v1';
+
 export function EventBanner({ event, rewardClaimed }: EventBannerProps) {
   const [remaining, setRemaining] = useState(() => msUntil(event.expires_at));
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem(DISMISS_KEY) === event.id; } catch { return false; }
+  });
 
   useEffect(() => {
+    // Re-evaluate dismissal when the active event changes.
+    try { setDismissed(localStorage.getItem(DISMISS_KEY) === event.id); } catch { /* ignore */ }
     const id = window.setInterval(() => setRemaining(msUntil(event.expires_at)), 1000);
     return () => window.clearInterval(id);
-  }, [event.expires_at]);
+  }, [event.id, event.expires_at]);
 
   const template = findSeasonalEvent(event.catalog_id);
   const emoji = template?.emoji ?? '🎉';
-  if (remaining <= 0) return null;
+  if (remaining <= 0 || dismissed) return null;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem(DISMISS_KEY, event.id); } catch { /* ignore */ }
+  };
 
   return (
+    // z-[48] keeps it below the owner panel (z-50). pointer-events-none on the
+    // wrapper makes the whole pill click-through; only the ✕ opts back in.
     <div className="fixed top-0 left-1/2 -translate-x-1/2 z-[48] pointer-events-none">
       <div
-        className="mt-2 px-4 py-1.5 rounded-full bg-pancake-cream border-2 border-pancake-gold shadow-lg flex items-center gap-2 pointer-events-auto"
+        className="mt-2 px-3 py-1.5 rounded-full bg-pancake-cream border-2 border-pancake-gold shadow-lg flex items-center gap-2"
         style={{ boxShadow: '0 0 18px rgba(212, 160, 23, 0.4)' }}
       >
         <span className="text-lg">{emoji}</span>
@@ -41,6 +57,13 @@ export function EventBanner({ event, rewardClaimed }: EventBannerProps) {
             Skin earned!
           </span>
         )}
+        <button
+          onClick={dismiss}
+          aria-label="Dismiss event banner"
+          className="pointer-events-auto ml-0.5 -mr-1 w-5 h-5 flex items-center justify-center rounded-full text-pancake-brown/70 hover:text-pancake-brown hover:bg-pancake-gold/20 cursor-pointer bg-transparent border-0 leading-none text-base"
+        >
+          ✕
+        </button>
       </div>
     </div>
   );

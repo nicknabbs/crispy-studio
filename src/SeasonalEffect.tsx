@@ -137,7 +137,7 @@ function AnnounceBanner({
   text, subtext, tintColor,
 }: { text: string; subtext: string; tintColor: string }) {
   return (
-    <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[55] pointer-events-none px-3 w-full max-w-md">
+    <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[49] pointer-events-none px-3 w-full max-w-md">
       <div
         className="rounded-2xl shadow-2xl border-4 px-5 py-4 text-center"
         style={{
