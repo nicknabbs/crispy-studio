@@ -1,11 +1,9 @@
 import { supabase } from './supabaseClient';
-import type { LiveEventId } from './LiveEventsOverlay';
 
 export interface ActiveSeasonalEvent {
   id: string;
   catalog_id: string;
   name: string;
-  theme_keys: LiveEventId[];
   reward_skin_id: string;
   started_at: string;
   expires_at: string;
@@ -27,14 +25,17 @@ export interface ClaimResult {
 export async function startSeasonalEvent(opts: {
   catalogId: string;
   name: string;
-  themeKeys: LiveEventId[];
   rewardSkinId: string;
   durationSeconds: number;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('start_seasonal_event', {
     p_catalog_id: opts.catalogId,
     p_name: opts.name,
-    p_theme_keys: opts.themeKeys,
+    // Seasonal events no longer reuse the Live-Events overlays — the visual
+    // is entirely themeConfig-driven. We still pass the (now-unused) param
+    // empty so the existing RPC signature is satisfied and the DB never
+    // stores legacy overlay keys that an older client could layer on.
+    p_theme_keys: [],
     p_reward_skin_id: opts.rewardSkinId,
     p_duration_seconds: opts.durationSeconds,
   });

@@ -635,7 +635,6 @@ export function OwnerPanel({
                               await startSeasonalEvent({
                                 catalogId: template.catalogId,
                                 name: template.name,
-                                themeKeys: template.themeKeys,
                                 rewardSkinId: template.rewardSkinId,
                                 durationSeconds: template.defaultDurationSeconds,
                               });

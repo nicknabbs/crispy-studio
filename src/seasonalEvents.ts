@@ -1,12 +1,14 @@
 // Catalog of holiday-themed events the owner can start from the Owner Panel.
 // Each entry maps to a stable catalog_id used as the seasonal_events row key
 // prefix (so re-running the same holiday next year creates a fresh row with
-// the same catalog_id). `themeKeys` references the existing LiveEventsOverlay
-// effects (kept for backward-compat). `themeConfig` is the data-driven
-// SeasonalEffect renderer's input — fullscreen tint, themed emoji rain,
-// and the on-screen announcement banner that pops when the event starts.
-
-import type { LiveEventId } from './LiveEventsOverlay';
+// the same catalog_id).
+//
+// A seasonal event is ONE self-contained effect, driven entirely by its
+// `themeConfig` — fullscreen tint, themed emoji rain, and the on-screen
+// announcement banner. It deliberately does NOT reuse the separate
+// "Live Events" overlays (fire/snow/confetti/…); an earlier version layered
+// two or three of those together, which looked like several events firing at
+// once rather than a single holiday.
 
 export interface SeasonalEventThemeConfig {
   /** CSS background value for the fullscreen wash overlay (any valid CSS
@@ -34,10 +36,8 @@ export interface SeasonalEventTemplate {
   catalogId: string;
   emoji: string;
   name: string;
-  /** Live-overlay flags toggled on for legacy reasons (kept so existing
-   *  Live Events panel parity works). The real visual layer is themeConfig. */
-  themeKeys: LiveEventId[];
-  /** Per-event data-driven visual theme: tint, rain, announcement. */
+  /** Per-event data-driven visual theme: tint, rain, announcement. This is
+   *  the ENTIRE visual layer — one cohesive effect, no live-overlay reuse. */
   themeConfig: SeasonalEventThemeConfig;
   /** The skin ID granted to participants. Must exist in skinShop.ts as
    *  limitedEdition. The owner can change this entry yearly to rotate the
@@ -51,7 +51,6 @@ export const SEASONAL_EVENTS: SeasonalEventTemplate[] = [
     catalogId: 'halloween',
     emoji: '🎃',
     name: 'Halloween Stack',
-    themeKeys: ['fire', 'lightning'],
     themeConfig: {
       // Vivid pumpkin-orange wash applied with 'screen' (the same blend the
       // existing Fire event uses) so the cream UI gets a warm glowing tint
@@ -72,7 +71,6 @@ export const SEASONAL_EVENTS: SeasonalEventTemplate[] = [
     catalogId: 'christmas',
     emoji: '🎄',
     name: 'Christmas Stack',
-    themeKeys: ['snow', 'confetti'],
     themeConfig: {
       // Cool festive blue with a brighter highlight up top — like a snowy
       // sky. Soft-light keeps the game readable.
@@ -92,7 +90,6 @@ export const SEASONAL_EVENTS: SeasonalEventTemplate[] = [
     catalogId: 'new-year',
     emoji: '🎆',
     name: "New Year's Stack",
-    themeKeys: ['confetti', 'disco'],
     themeConfig: {
       // Midnight navy with gold highlights — fireworks-against-sky vibe.
       tintCss: 'radial-gradient(ellipse at center, rgba(80,60,140,0.35) 0%, rgba(20,20,60,0.55) 100%)',
@@ -111,7 +108,6 @@ export const SEASONAL_EVENTS: SeasonalEventTemplate[] = [
     catalogId: 'valentines',
     emoji: '💖',
     name: "Valentine's Stack",
-    themeKeys: ['rainbow', 'confetti'],
     themeConfig: {
       // Warm pink wash via screen blend so the cream brightens rather than
       // darkens — soft, sweet, valentine-y.
