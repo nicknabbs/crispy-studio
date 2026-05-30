@@ -4,6 +4,8 @@ import {
   GARDEN_COLUMNS,
   stageProgress,
   secondsToNextStage,
+  secondsUntilDecay,
+  secondsToMature,
   type PlantSpecies,
 } from './pancakeGarden';
 import { formatNumber } from './gameData';
@@ -21,14 +23,21 @@ interface PancakeGardenModalProps {
   onClear: (tileId: number) => void;
   discoveryNotice: DiscoveryNotice | null;
   onDismissDiscovery: () => void;
+  /** Whether the player has completed (or skipped) the first-time
+   *  tutorial. When false, the modal renders the coach overlay on first
+   *  open and calls onMarkTutorialSeen when the player finishes / skips. */
+  tutorialSeen: boolean;
+  onMarkTutorialSeen: () => void;
 }
 
 export function PancakeGardenModal(props: PancakeGardenModalProps) {
   const {
     isOpen, onClose, tiles, bonuses, discovered, cps,
     onPlant, onHarvest, onClear, discoveryNotice, onDismissDiscovery,
+    tutorialSeen, onMarkTutorialSeen,
   } = props;
   const [pickerForTile, setPickerForTile] = useState<number | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(!tutorialSeen);
 
   if (!isOpen) return null;
 
@@ -119,6 +128,15 @@ export function PancakeGardenModal(props: PancakeGardenModalProps) {
       {discoveryNotice && (
         <DiscoveryToast notice={discoveryNotice} onDismiss={onDismissDiscovery} />
       )}
+
+      {tutorialOpen && (
+        <GardenTutorial
+          onFinish={() => {
+            setTutorialOpen(false);
+            onMarkTutorialSeen();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -153,6 +171,9 @@ function TileCard({ tile, cps, onClickPlant, onHarvest, onClear }: TileCardProps
   const stage = tile.stage;
   const progress = stageProgress(species, tile.ageSeconds);
   const remaining = secondsToNextStage(species, tile.ageSeconds);
+  const decayRemaining = stage === 'mature'
+    ? secondsUntilDecay(tile.harvestExpiresAt, Date.now())
+    : null;
 
   // Display emoji shrinks at earlier stages so growth feels real.
   const scale = stage === 'seed' ? 'text-lg' : stage === 'sprout' ? 'text-2xl' : 'text-4xl';
@@ -204,13 +225,20 @@ function TileCard({ tile, cps, onClickPlant, onHarvest, onClear }: TileCardProps
       </div>
       <div className="w-full">
         {stage === 'mature' ? (
-          <button
-            onClick={onHarvest}
-            className="w-full py-1 rounded-md bg-pancake-gold text-pancake-brown text-[10px] font-extrabold border-0 cursor-pointer hover:brightness-105"
-            title={harvestPreviewText(species, cps)}
-          >
-            Harvest
-          </button>
+          <>
+            <button
+              onClick={onHarvest}
+              className="w-full py-1 rounded-md bg-pancake-gold text-pancake-brown text-[10px] font-extrabold border-0 cursor-pointer hover:brightness-105"
+              title={harvestPreviewText(species, cps)}
+            >
+              Harvest
+            </button>
+            {decayRemaining !== null && (
+              <div className="text-[9px] text-pancake-medium mt-0.5 text-center tabular-nums">
+                Decays in {formatTime(decayRemaining)}
+              </div>
+            )}
+          </>
         ) : stage === 'decayed' ? (
           <button
             onClick={onClear}
@@ -279,7 +307,7 @@ function PlantPicker({
                 <div className="flex-1 min-w-0">
                   <div className="text-pancake-brown font-bold text-sm">{s.name} <span className="text-pancake-medium font-normal text-[10px]">T{s.tier}</span></div>
                   <div className="text-pancake-medium text-[11px]">
-                    {Math.round(s.secondsPerStage * 3 / 60)} min to mature
+                    {formatMatureTime(secondsToMature(s))} to mature
                     {s.activeBonus && (
                       <> · {describeBonus(s.activeBonus)}</>
                     )}
@@ -335,6 +363,83 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.ceil(seconds % 60);
   return `${m}m ${s}s`;
+}
+
+/** Plain-language duration for the "X to mature" picker hint. Whole minutes
+ *  when the duration divides cleanly; otherwise minutes + seconds. */
+function formatMatureTime(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  if (s === 0) return `${m} min`;
+  return `${m} min ${s}s`;
+}
+
+const TUTORIAL_STEPS = [
+  {
+    emoji: '🌱',
+    title: 'Welcome to the Pancake Garden!',
+    body: 'Tap any empty tile (the 🍳 pan) to pick a seedling and plant it.',
+  },
+  {
+    emoji: '⏳',
+    title: 'Plants grow in real time',
+    body: 'Seedlings need real-world minutes to mature. You can close the game and they\'ll keep growing in the background.',
+  },
+  {
+    emoji: '🥞',
+    title: 'Mature plants give a CpS boost…',
+    body: 'While a plant is Mature you get its passive bonus on every pancake.',
+  },
+  {
+    emoji: '🌾',
+    title: '…then harvest before it decays',
+    body: 'After it matures you have a couple of minutes to tap Harvest for a big pancake payout. Closed-game plants pause their decay timer until you\'re back.',
+  },
+];
+
+function GardenTutorial({ onFinish }: { onFinish: () => void }) {
+  const [step, setStep] = useState(0);
+  const isLast = step === TUTORIAL_STEPS.length - 1;
+  const s = TUTORIAL_STEPS[step];
+  return (
+    <div
+      className="fixed inset-0 z-[58] flex items-center justify-center bg-black/55 backdrop-blur-sm p-4"
+      onClick={e => e.stopPropagation()}
+    >
+      <div
+        className="rounded-2xl shadow-2xl border-4 border-pancake-gold bg-pancake-cream max-w-sm w-full p-5 text-center"
+        style={{ boxShadow: '0 0 30px rgba(212, 160, 23, 0.55)' }}
+      >
+        <div className="text-[11px] uppercase tracking-wider font-bold text-pancake-medium">
+          Garden tutorial · {step + 1} / {TUTORIAL_STEPS.length}
+        </div>
+        <div className="text-5xl mt-2 mb-1" style={{ animation: 'pg-sway 3s ease-in-out infinite' }}>
+          {s.emoji}
+        </div>
+        <h3 className="font-extrabold text-pancake-brown text-lg leading-tight">
+          {s.title}
+        </h3>
+        <p className="text-sm text-pancake-dark mt-2">
+          {s.body}
+        </p>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={onFinish}
+            className="flex-1 py-2 rounded-lg border-2 border-pancake-medium/40 bg-pancake-warm text-pancake-brown text-sm font-bold cursor-pointer hover:bg-pancake-warm/80"
+          >
+            Skip
+          </button>
+          <button
+            onClick={() => isLast ? onFinish() : setStep(step + 1)}
+            className="flex-1 py-2 rounded-lg bg-pancake-gold text-pancake-brown text-sm font-extrabold border-0 cursor-pointer hover:brightness-105"
+          >
+            {isLast ? "Let’s grow" : 'Next'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Scoped animation keyframes. Lives inside the modal so we don't have to

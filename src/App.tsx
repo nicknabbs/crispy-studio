@@ -640,6 +640,11 @@ function App() {
         onClear={garden.clear}
         discoveryNotice={garden.discoveryNotice}
         onDismissDiscovery={garden.dismissDiscovery}
+        tutorialSeen={!!state.garden?.tutorialSeen}
+        onMarkTutorialSeen={() => {
+          const g = state.garden ?? { tiles: [], discovered: {} };
+          setDirectState({ garden: { ...g, tutorialSeen: true } });
+        }}
       />
 
       <OwnerPanel

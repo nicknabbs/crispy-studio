@@ -3,6 +3,8 @@ import type { GameState, GardenState } from './useGameState';
 import {
   GARDEN_SPECIES,
   computeStage,
+  computeEffectiveStage,
+  secondsToMature,
   currentGardenBonuses,
   findSpecies,
   getNeighborIndexes,
@@ -11,6 +13,18 @@ import {
   type PlantSpecies,
 } from './pancakeGarden';
 
+// Time the player has to harvest after a plant matures while they are
+// online. The first online tick that observes maturity stamps
+// harvestExpiresAt = now + this; once that deadline passes, the plant
+// decays. Tunable in one place.
+const ONLINE_HARVEST_WINDOW_MS = 120_000; // 2 min
+
+// Grace period applied on rejoin to plants that matured (or would have
+// decayed under the old purely-time-based rule) while the player was
+// offline. The player should never log back in to find a plant they
+// grew has silently rotted — this gives them a fair chance to harvest.
+const OFFLINE_GRACE_MS = 120_000; // 2 min
+
 export interface ResolvedTile {
   id: number;
   speciesId: string | null;
@@ -18,6 +32,10 @@ export interface ResolvedTile {
   species: PlantSpecies | null;
   stage: GardenStage;
   ageSeconds: number;
+  /** Set on tiles in the mature stage once the decay timer has started.
+   *  null = mature with no decay window yet (still waiting to be
+   *  observed-online or just-rejoined-not-yet-stamped). */
+  harvestExpiresAt: number | null;
 }
 
 export interface GardenBonuses {
@@ -82,17 +100,52 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
   const tiles: ResolvedTile[] = useMemo(() => {
     return garden.tiles.map(tile => {
       if (!tile.speciesId) {
-        return { id: tile.id, speciesId: null, plantedAt: 0, species: null, stage: 'empty' as const, ageSeconds: 0 };
+        return { id: tile.id, speciesId: null, plantedAt: 0, species: null, stage: 'empty' as const, ageSeconds: 0, harvestExpiresAt: null };
       }
       const species = findSpecies(tile.speciesId) ?? null;
       if (!species) {
-        return { id: tile.id, speciesId: tile.speciesId, plantedAt: tile.plantedAt, species: null, stage: 'empty' as const, ageSeconds: 0 };
+        return { id: tile.id, speciesId: tile.speciesId, plantedAt: tile.plantedAt, species: null, stage: 'empty' as const, ageSeconds: 0, harvestExpiresAt: null };
       }
       const ageSeconds = Math.max(0, (now - tile.plantedAt) / 1000);
-      const stage = computeStage(species, ageSeconds);
-      return { id: tile.id, speciesId: tile.speciesId, plantedAt: tile.plantedAt, species, stage, ageSeconds };
+      const harvestExpiresAt = tile.harvestExpiresAt ?? null;
+      const stage = computeEffectiveStage(species, ageSeconds, harvestExpiresAt, now);
+      return { id: tile.id, speciesId: tile.speciesId, plantedAt: tile.plantedAt, species, stage, ageSeconds, harvestExpiresAt };
     });
   }, [garden.tiles, now]);
+
+  // Lazily stamp harvestExpiresAt on tiles that have just been observed-
+  // online at the mature stage (or that re-entered an online session past
+  // the old purely-time-based decay threshold). One write per transition;
+  // skipped entirely when nothing changes.
+  useEffect(() => {
+    const cur = stateRef.current;
+    const gardenCur = cur.garden ?? { tiles: [], discovered: {} };
+    let mutated = false;
+    const newTiles = gardenCur.tiles.map(t => {
+      if (!t.speciesId || t.harvestExpiresAt != null) return t;
+      const species = findSpecies(t.speciesId);
+      if (!species) return t;
+      const ageSeconds = Math.max(0, (now - t.plantedAt) / 1000);
+      const natural = computeStage(species, ageSeconds);
+      if (natural !== 'mature') return t;
+      // Was the player offline when this plant matured? Heuristic: if the
+      // plant has been mature for longer than the online harvest window
+      // already, it must have matured while we weren't here — use the
+      // OFFLINE_GRACE_MS so they have a fair chance on return.
+      const matureForMs = (ageSeconds - secondsToMature(species)) * 1000;
+      const windowMs = matureForMs > ONLINE_HARVEST_WINDOW_MS
+        ? OFFLINE_GRACE_MS
+        : ONLINE_HARVEST_WINDOW_MS;
+      mutated = true;
+      return { ...t, harvestExpiresAt: now + windowMs };
+    });
+    if (mutated) {
+      setDirectState({ garden: { ...gardenCur, tiles: newTiles } });
+    }
+    // Intentionally depend on `now` — re-evaluates every tick so mature
+    // transitions are stamped within a second.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, garden.tiles]);
 
   // Passive bonuses: sum activeBonus across every tile currently at Mature stage.
   const bonuses: GardenBonuses = useMemo(() => {
@@ -127,6 +180,7 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
     }
 
     // Look at neighbor tiles — collect mature species IDs for hybrid resolve.
+    const nowMs = Date.now();
     const neighbors = getNeighborIndexes(tileId);
     const neighborMatureSpeciesIds: string[] = [];
     for (const ni of neighbors) {
@@ -134,8 +188,8 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
       if (!nt?.speciesId) continue;
       const species = findSpecies(nt.speciesId);
       if (!species) continue;
-      const ageSeconds = Math.max(0, (Date.now() - nt.plantedAt) / 1000);
-      if (computeStage(species, ageSeconds) === 'mature') {
+      const ageSeconds = Math.max(0, (nowMs - nt.plantedAt) / 1000);
+      if (computeEffectiveStage(species, ageSeconds, nt.harvestExpiresAt ?? null, nowMs) === 'mature') {
         neighborMatureSpeciesIds.push(nt.speciesId);
       }
     }
@@ -144,7 +198,7 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
 
     const newTiles = gardenCur.tiles.map(t =>
       t.id === tileId
-        ? { ...t, speciesId: resolved.resolvedSpeciesId, plantedAt: Date.now() }
+        ? { ...t, speciesId: resolved.resolvedSpeciesId, plantedAt: nowMs, harvestExpiresAt: null }
         : t,
     );
     const newDiscovered = { ...gardenCur.discovered };
@@ -178,8 +232,10 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
     if (!tile?.speciesId) return;
     const species = findSpecies(tile.speciesId);
     if (!species) return;
-    const ageSeconds = Math.max(0, (Date.now() - tile.plantedAt) / 1000);
-    if (computeStage(species, ageSeconds) !== 'mature') return;
+    const nowMs = Date.now();
+    const ageSeconds = Math.max(0, (nowMs - tile.plantedAt) / 1000);
+    const stage = computeEffectiveStage(species, ageSeconds, tile.harvestExpiresAt ?? null, nowMs);
+    if (stage !== 'mature') return;
 
     // Apply drops
     const drop = species.harvestDrop;
@@ -193,9 +249,9 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
       }
     }
 
-    // Clear the tile
+    // Clear the tile — also clear harvestExpiresAt so re-planting starts fresh.
     const newTiles = gardenCur.tiles.map(t =>
-      t.id === tileId ? { ...t, speciesId: null, plantedAt: 0 } : t,
+      t.id === tileId ? { ...t, speciesId: null, plantedAt: 0, harvestExpiresAt: null } : t,
     );
     setDirectState({ garden: { ...gardenCur, tiles: newTiles } });
   }, [cps, addCookies, setDirectState]);
@@ -204,7 +260,7 @@ export function usePancakeGarden(opts: UsePancakeGardenOpts): UsePancakeGardenRe
     const cur = stateRef.current;
     const gardenCur = cur.garden ?? { tiles: [], discovered: {} };
     const newTiles = gardenCur.tiles.map(t =>
-      t.id === tileId ? { ...t, speciesId: null, plantedAt: 0 } : t,
+      t.id === tileId ? { ...t, speciesId: null, plantedAt: 0, harvestExpiresAt: null } : t,
     );
     setDirectState({ garden: { ...gardenCur, tiles: newTiles } });
   }, [setDirectState]);

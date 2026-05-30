@@ -196,27 +196,80 @@ export function findSpecies(id: string): PlantSpecies | undefined {
   return GARDEN_SPECIES.find(s => s.id === id);
 }
 
-/** Given the time since planting, return the current stage. */
+/** Canonical "time to fully mature", in seconds — the SINGLE source of
+ *  truth shared by the growth logic and the UI countdown, so the displayed
+ *  duration always equals the real one. This is the same value the plant
+ *  picker has always displayed (secondsPerStage × 3), so existing plants'
+ *  shown times don't change — but now a plant genuinely takes that long to
+ *  mature instead of maturing early at the 2× mark. */
+export function secondsToMature(species: PlantSpecies): number {
+  return species.secondsPerStage * 3;
+}
+
+/** Given the time since planting, return the "natural" stage based on
+ *  elapsed real time alone (the seed → sprout → mature transition). The
+ *  separate decay rule is governed by harvestExpiresAt; see
+ *  computeEffectiveStage below. Growth (seed/sprout → mature) is
+ *  unconditional and timestamp-driven so it happens correctly while the
+ *  player is offline.
+ *
+ *  Lifecycle: the run-up to maturity is split evenly into seed (first
+ *  half) and sprout (second half); maturity lands exactly at
+ *  secondsToMature(). The displayed countdown reads the same value, so
+ *  "6 minutes to mature" really takes 6 minutes. */
 export function computeStage(species: PlantSpecies, ageSeconds: number): GardenStage {
-  if (ageSeconds < species.secondsPerStage) return 'seed';
-  if (ageSeconds < species.secondsPerStage * 2) return 'sprout';
-  if (ageSeconds < species.secondsPerStage * 3) return 'mature';
-  return 'decayed';
+  const matureAt = secondsToMature(species);
+  if (ageSeconds < matureAt / 2) return 'seed';
+  if (ageSeconds < matureAt) return 'sprout';
+  return 'mature';
 }
 
-/** Progress within the current stage, 0..1 (used for the progress bar). */
+/** The actual stage shown to the player, after applying the
+ *  harvest-window rules. Decay can only happen while harvestExpiresAt is
+ *  set and elapsed — so a plant that matured while the player was offline
+ *  stays alive until they come back. */
+export function computeEffectiveStage(
+  species: PlantSpecies,
+  ageSeconds: number,
+  harvestExpiresAt: number | null | undefined,
+  nowMs: number,
+): GardenStage {
+  const natural = computeStage(species, ageSeconds);
+  if (natural === 'seed' || natural === 'sprout') return natural;
+  // natural === 'mature': decay only if the window has been set AND passed.
+  if (harvestExpiresAt != null && nowMs > harvestExpiresAt) return 'decayed';
+  return 'mature';
+}
+
+/** Progress within the current growth stage, 0..1 (used for the progress
+ *  bar). seed and sprout each span half of the run-up to maturity. */
 export function stageProgress(species: PlantSpecies, ageSeconds: number): number {
-  const stageDuration = species.secondsPerStage;
-  const within = ageSeconds % stageDuration;
-  return Math.min(1, Math.max(0, within / stageDuration));
+  const half = secondsToMature(species) / 2;
+  if (ageSeconds >= half * 2) return 1; // mature
+  const within = ageSeconds % half;
+  return Math.min(1, Math.max(0, within / half));
 }
 
-/** Seconds until the plant reaches the next stage from this point. */
+/** Seconds until the plant reaches the next growth stage (seed → sprout
+ *  → mature). Returns 0 once at mature — the post-mature decay countdown
+ *  is independent and driven by harvestExpiresAt, not by this. */
 export function secondsToNextStage(species: PlantSpecies, ageSeconds: number): number {
-  const totalLifecycle = species.secondsPerStage * 4;
-  if (ageSeconds >= totalLifecycle) return 0;
-  const nextBoundary = Math.ceil(ageSeconds / species.secondsPerStage) * species.secondsPerStage;
+  const matureAt = secondsToMature(species);
+  const half = matureAt / 2;
+  if (ageSeconds >= matureAt) return 0;
+  const nextBoundary = ageSeconds < half ? half : matureAt;
   return Math.max(0, nextBoundary - ageSeconds);
+}
+
+/** Seconds remaining in the harvest window for a mature plant. Null if the
+ *  window hasn't been set yet (the player hasn't been online to start the
+ *  decay timer). */
+export function secondsUntilDecay(
+  harvestExpiresAt: number | null | undefined,
+  nowMs: number,
+): number | null {
+  if (harvestExpiresAt == null) return null;
+  return Math.max(0, (harvestExpiresAt - nowMs) / 1000);
 }
 
 /** Grid neighbors (4-adjacent, no diagonals) for hybrid checks. */

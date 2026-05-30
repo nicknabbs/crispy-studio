@@ -10,12 +10,22 @@ export interface GardenTile {
   speciesId: string | null;
   /** Epoch ms when planted. Lifecycle is derived from elapsed time. */
   plantedAt: number;
+  /** Epoch ms after which this plant decays. Set lazily by the garden hook
+   *  the first time an online client observes the tile reach the mature
+   *  stage (or on rejoin if mature was reached while offline). Null means
+   *  "the player hasn't been online to start the decay timer yet" — plant
+   *  doesn't rot until set. Backward-compatible: older saves don't have
+   *  the field; defaultGarden + spread-on-load treats it as null. */
+  harvestExpiresAt?: number | null;
 }
 
 export interface GardenState {
   tiles: GardenTile[];
   /** Species the player has discovered (hybrids start hidden). */
   discovered: Record<string, boolean>;
+  /** True once the player has finished (or skipped) the first-time tutorial.
+   *  Optional / undefined-on-load so existing saves migrate cleanly. */
+  tutorialSeen?: boolean;
 }
 
 export interface GameState {
@@ -103,9 +113,10 @@ function defaultState(): GameState {
 function defaultGarden(): GardenState {
   return {
     tiles: Array.from({ length: GARDEN_TILE_COUNT }, (_, id) => ({
-      id, speciesId: null, plantedAt: 0,
+      id, speciesId: null, plantedAt: 0, harvestExpiresAt: null,
     })),
     discovered: Object.fromEntries(STARTER_SPECIES_IDS.map(id => [id, true])),
+    tutorialSeen: false,
   };
 }
 
