@@ -13,8 +13,7 @@
 // Default outDir is the sibling iOS app's Content folder.
 
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import {
   BUILDINGS,
   UPGRADES,
@@ -28,10 +27,9 @@ import { SHOP_SKINS } from '../src/skinShop.ts';
 // hook. Achievement unlock logic is reimplemented natively in a later phase,
 // so it's intentionally omitted from this Phase-1 export.
 
-const here = dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2]
   ? resolve(process.cwd(), process.argv[2])
-  : resolve(here, '../../pancake-stack-ios/PancakeStack/Content');
+  : resolve(process.env.HOME ?? '.', 'Desktop/pancake-stack-ios/PancakeStack/Content');
 
 mkdirSync(outDir, { recursive: true });
 const write = (name, data) => {
