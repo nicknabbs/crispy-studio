@@ -23,6 +23,7 @@ import {
   fetchActiveSeasonalEvent,
   type ActiveSeasonalEvent,
 } from './seasonalEventsApi';
+import { notifySeasonalEventChanged } from './seasonalEventBus';
 
 const STORAGE_UNLOCKED = 'pancake-owner-unlocked-v2';
 const STORAGE_UNLOCKED_OLD = 'pancake-owner-unlocked-v1';
@@ -589,11 +590,18 @@ export function OwnerPanel({
                             setSeasonalEventError(null);
                             try {
                               await endSeasonalEvent(template.catalogId);
-                              await supabase.channel('seasonal-events-bus').send({
+                              // Send the realtime broadcast for OTHER connected
+                              // clients, then poke the local bus so this tab's
+                              // own useSeasonalEvents instance also re-fetches
+                              // (Supabase broadcast.self: false would skip us).
+                              const bus = supabase.channel('seasonal-events-bus');
+                              await bus.send({
                                 type: 'broadcast',
                                 event: 'event-ended',
                                 payload: { catalogId: template.catalogId },
                               });
+                              void supabase.removeChannel(bus);
+                              notifySeasonalEventChanged();
                               setActiveSeasonalEvent(null);
                             } catch (e) {
                               setSeasonalEventError(e instanceof Error ? e.message : String(e));
@@ -619,11 +627,19 @@ export function OwnerPanel({
                                 rewardSkinId: template.rewardSkinId,
                                 durationSeconds: template.defaultDurationSeconds,
                               });
-                              await supabase.channel('seasonal-events-bus').send({
+                              // Send the realtime broadcast for OTHER connected
+                              // clients, then poke the local bus so this tab's
+                              // own useSeasonalEvents instance applies the
+                              // theme + claims the skin even when the owner is
+                              // alone in the server.
+                              const bus = supabase.channel('seasonal-events-bus');
+                              await bus.send({
                                 type: 'broadcast',
                                 event: 'event-started',
                                 payload: { catalogId: template.catalogId },
                               });
+                              void supabase.removeChannel(bus);
+                              notifySeasonalEventChanged();
                               // Orange announcement in chat so everyone sees
                               // the event kicked off and remembers to play.
                               void (async () => {

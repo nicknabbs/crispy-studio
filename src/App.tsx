@@ -40,6 +40,7 @@ import { PancakePassCelebration } from './PancakePassCelebration';
 import { usePancakePass } from './usePancakePass';
 import { useSeasonalEvents } from './useSeasonalEvents';
 import { EventBanner } from './EventBanner';
+import { SeasonalEffect } from './SeasonalEffect';
 import { MissedEventNotice } from './MissedEventNotice';
 import { usePancakeGarden } from './usePancakeGarden';
 import { PancakeGardenModal } from './PancakeGardenModal';
@@ -714,7 +715,10 @@ function App() {
       />
 
       {activeEvent && (
-        <EventBanner event={activeEvent} rewardClaimed={rewardClaimedForActive} />
+        <>
+          <SeasonalEffect event={activeEvent} />
+          <EventBanner event={activeEvent} rewardClaimed={rewardClaimedForActive} />
+        </>
       )}
 
       {missedQueue.length > 0 && (

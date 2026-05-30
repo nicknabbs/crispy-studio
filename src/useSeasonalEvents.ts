@@ -7,7 +7,7 @@ import {
   type ActiveSeasonalEvent,
   type MissedSeasonalEvent,
 } from './seasonalEventsApi';
-import { setLiveEventLocal, type LiveEventId } from './LiveEventsOverlay';
+import { onSeasonalEventChanged } from './seasonalEventBus';
 
 interface UseSeasonalEventsOpts {
   playerId: string;
@@ -52,25 +52,10 @@ export function useSeasonalEvents(opts: UseSeasonalEventsOpts): UseSeasonalEvent
   const [missedQueue, setMissedQueue] = useState<MissedSeasonalEvent[]>([]);
   const onRewardRef = useRef(onReward);
   onRewardRef.current = onReward;
-  const appliedThemesRef = useRef<Set<LiveEventId>>(new Set());
-
-  // Apply / unapply theme overlays locally. Tracks the last-applied set so
-  // we can cleanly remove just what we added, without clobbering anything
-  // the owner may have toggled via the Live Events broadcast.
-  const applyThemes = useCallback((keys: LiveEventId[]) => {
-    const next = new Set(keys);
-    for (const old of appliedThemesRef.current) {
-      if (!next.has(old)) setLiveEventLocal(old, false);
-    }
-    for (const k of next) {
-      if (!appliedThemesRef.current.has(k)) setLiveEventLocal(k, true);
-    }
-    appliedThemesRef.current = next;
-  }, []);
-  const clearThemes = useCallback(() => {
-    for (const k of appliedThemesRef.current) setLiveEventLocal(k, false);
-    appliedThemesRef.current = new Set();
-  }, []);
+  // Visual theming is now entirely driven by <SeasonalEffect> mounting/
+  // unmounting when activeEvent flips. No imperative live-event flag flips
+  // here — keeps the seasonal pipeline a single, data-driven system per the
+  // event's themeConfig.
 
   // Main effect: load active event + missed events on mount, subscribe to
   // event-started / event-ended broadcasts for live reactivity, and tick
@@ -84,24 +69,16 @@ export function useSeasonalEvents(opts: UseSeasonalEventsOpts): UseSeasonalEvent
         const ev = await fetchActiveSeasonalEvent();
         if (cancelled) return;
         setActiveEvent(ev);
-        if (ev) {
-          applyThemes(ev.theme_keys);
-          if (playerId) {
-            try {
-              const res = await claimSeasonalEventReward({ playerId, eventId: ev.id });
-              if (!cancelled && res.newly_claimed && res.reward_skin_id) {
-                onRewardRef.current(res.reward_skin_id);
-              }
-            } catch { /* swallow — claim is retried on next reload */ }
-          }
-        } else {
-          clearThemes();
+        if (ev && playerId) {
+          try {
+            const res = await claimSeasonalEventReward({ playerId, eventId: ev.id });
+            if (!cancelled && res.newly_claimed && res.reward_skin_id) {
+              onRewardRef.current(res.reward_skin_id);
+            }
+          } catch { /* swallow — claim is retried on next reload */ }
         }
       } catch {
-        if (!cancelled) {
-          setActiveEvent(null);
-          clearThemes();
-        }
+        if (!cancelled) setActiveEvent(null);
       }
     };
 
@@ -119,18 +96,28 @@ export function useSeasonalEvents(opts: UseSeasonalEventsOpts): UseSeasonalEvent
     }
 
     // Realtime ping channel so the owner starting / ending an event
-    // updates every connected client instantly.
+    // updates every OTHER connected client instantly. Supabase realtime
+    // broadcasts don't echo back to the sender (broadcast.self defaults
+    // false), so the OwnerPanel also calls notifySeasonalEventChanged()
+    // on its local bus — that path covers the "owner alone in server"
+    // case where there's nobody else to receive the broadcast and the
+    // sender's own client needs to react.
     const channel = supabase.channel('seasonal-events-bus');
     channel.on('broadcast', { event: 'event-started' }, () => { void loadAndApply(); });
     channel.on('broadcast', { event: 'event-ended' }, () => { void loadAndApply(); });
     channel.subscribe();
 
+    // Local bus: OwnerPanel notifies after a successful start/end so we
+    // re-fetch immediately, no broadcast echo required.
+    const unsubLocal = onSeasonalEventChanged(() => { void loadAndApply(); });
+
     // Auto-clear when the active event's expires_at passes (owner may
-    // not click End; the duration just runs out naturally).
+    // not click End; the duration just runs out naturally). Flipping
+    // activeEvent → null unmounts <SeasonalEffect> and tears down all
+    // visuals.
     const tick = window.setInterval(() => {
       setActiveEvent(cur => {
         if (cur && new Date(cur.expires_at).getTime() <= Date.now()) {
-          clearThemes();
           return null;
         }
         return cur;
@@ -140,7 +127,8 @@ export function useSeasonalEvents(opts: UseSeasonalEventsOpts): UseSeasonalEvent
     return () => {
       cancelled = true;
       window.clearInterval(tick);
-      clearThemes();
+      unsubLocal();
+      void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerId]);
