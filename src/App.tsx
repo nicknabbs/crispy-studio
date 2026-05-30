@@ -44,6 +44,8 @@ import { SeasonalEffect } from './SeasonalEffect';
 import { MissedEventNotice } from './MissedEventNotice';
 import { usePancakeGarden } from './usePancakeGarden';
 import { PancakeGardenModal } from './PancakeGardenModal';
+import { useNumbersGoUp } from './useNumbersGoUp';
+import { NumbersGoUpModal } from './NumbersGoUpModal';
 import { formatNumber, formatCps } from './gameData';
 import { playClick, playPurchase, playAchievement, playFrenzy, playButterCatch, ensureAudioReady, setMuted } from './sounds';
 import { submitBaseGameScoresIfBetter } from './baseGameLeaderboard';
@@ -168,6 +170,13 @@ function App() {
   // mirrored to a module-level ref the CpS/click calc reads.
   const [gardenOpen, setGardenOpen] = useState(false);
   const garden = usePancakeGarden({ state, setDirectState, cps, addCookies });
+
+  // Numbers Go Up — standalone idle counter (big-number, persists separately).
+  // Runs continuously so the number keeps climbing even with the modal closed.
+  const [numbersOpen, setNumbersOpen] = useState(false);
+  const numbers = useNumbersGoUp({
+    playerName: presenceLocalName ?? null,
+  });
 
   // Seasonal events: detect active event from DB, apply themes, claim
   // reward → add the limited-edition skin to ownedSkinIds. Also surfaces
@@ -442,6 +451,14 @@ function App() {
               <span className="hidden sm:inline">Garden</span>
             </button>
             <button
+              onClick={() => setNumbersOpen(true)}
+              className="text-[11px] text-blue-900/90 bg-blue-50/85 backdrop-blur-sm rounded-full leading-tight whitespace-nowrap border border-blue-400/40 shadow-sm cursor-pointer hover:bg-blue-100 hover:scale-105 transition-all flex items-center gap-1 font-bold px-1.5 sm:pl-1.5 sm:pr-2.5 py-0.5"
+              title="Numbers Go Up — an idle counter that climbs forever"
+            >
+              <span className="text-sm">🔢</span>
+              <span className="hidden sm:inline">Numbers</span>
+            </button>
+            <button
               onClick={() => setActivePlayersOpen(true)}
               className="text-[10px] text-pancake-brown/85 bg-pancake-cream/80 backdrop-blur-sm rounded-full px-2 py-0.5 leading-tight whitespace-nowrap border border-pancake-gold/30 shadow-sm cursor-pointer hover:bg-pancake-cream transition-colors"
               title={`${playerCount} playing right now`}
@@ -647,6 +664,15 @@ function App() {
         }}
       />
 
+      <NumbersGoUpModal
+        isOpen={numbersOpen}
+        onClose={() => setNumbersOpen(false)}
+        value={numbers.value}
+        best={numbers.best}
+        tier={numbers.tier}
+        onBuyTier={numbers.buyTier}
+      />
+
       <OwnerPanel
         isOpen={ownerOpen}
         onClose={() => setOwnerOpen(false)}
@@ -665,6 +691,10 @@ function App() {
         cpsOverride={cpsOverride}
         clickOverride={clickOverride}
         ownerDisplayName={presenceLocalName ?? 'Owner'}
+        nguValue={numbers.value}
+        nguTier={numbers.tier}
+        onNguSetValue={numbers.ownerSetValue}
+        onNguSetTier={numbers.ownerSetTier}
       />
 
       <LiveEventsOverlay />

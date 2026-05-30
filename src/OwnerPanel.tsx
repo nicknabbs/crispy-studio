@@ -24,6 +24,8 @@ import {
   type ActiveSeasonalEvent,
 } from './seasonalEventsApi';
 import { notifySeasonalEventChanged } from './seasonalEventBus';
+import { type BigNum, bnFormat, bnNorm } from './bignum';
+import { TIERS, findTier } from './numbersGoUp';
 
 const STORAGE_UNLOCKED = 'pancake-owner-unlocked-v2';
 const STORAGE_UNLOCKED_OLD = 'pancake-owner-unlocked-v1';
@@ -88,6 +90,11 @@ interface OwnerPanelProps {
   cpsOverride: number | null;
   clickOverride: number | null;
   ownerDisplayName: string;
+  // Numbers Go Up owner hacks.
+  nguValue: BigNum;
+  nguTier: number;
+  onNguSetValue: (v: BigNum) => void;
+  onNguSetTier: (tierId: number) => void;
 }
 
 export function OwnerPanel({
@@ -96,6 +103,7 @@ export function OwnerPanel({
   activateFrenzy, onForceButterPat,
   onSetCpsOverride, onSetClickOverride, cpsOverride, clickOverride,
   ownerDisplayName,
+  nguValue, nguTier, onNguSetValue, onNguSetTier,
 }: OwnerPanelProps) {
   // OP auto-clicker — rate so absurd we can't actually call clickCookie() that
   // many times. Instead, every tick we add the per-tick share directly to state.
@@ -197,6 +205,10 @@ export function OwnerPanel({
 
   // Screen-text broadcaster
   const [screenTextInput, setScreenTextInput] = useState('Hello Pancake Stack players!');
+
+  // Numbers Go Up owner overrides
+  const [nguMantissaInput, setNguMantissaInput] = useState('1');
+  const [nguExponentInput, setNguExponentInput] = useState('100');
 
   // Reset confirmation
   const [confirmReset, setConfirmReset] = useState(false);
@@ -671,6 +683,72 @@ export function OwnerPanel({
               <p className="text-[10px] text-fuchsia-200/60 mt-2">
                 Only players online during the window earn the skin. Players who weren't there see
                 a "come back next year" notice on their next visit.
+              </p>
+            </Section>
+
+            {/* ==================== NUMBERS GO UP ==================== */}
+            <Section title="🔢 Numbers Go Up" subtitle={`Now: ${bnFormat(nguValue)} · ${findTier(nguTier)?.label ?? '+1'}/sec`}>
+              <div className="text-xs font-bold text-fuchsia-200 mb-1">Set number (mantissa × 10^exponent)</div>
+              <div className="flex gap-2 mb-2 items-center">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={nguMantissaInput}
+                  onChange={e => setNguMantissaInput(e.target.value)}
+                  placeholder="mantissa (e.g. 1.23)"
+                  className="flex-1 min-w-0 px-3 py-2 rounded border-2 border-fuchsia-400/40 bg-black/40 text-white font-medium outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
+                />
+                <span className="text-fuchsia-200/80 text-sm whitespace-nowrap">× 10^</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={nguExponentInput}
+                  onChange={e => setNguExponentInput(e.target.value)}
+                  placeholder="exp"
+                  className="w-20 px-3 py-2 rounded border-2 border-fuchsia-400/40 bg-black/40 text-white font-medium outline-none focus:border-fuchsia-300 placeholder-fuchsia-300/50"
+                />
+                <button
+                  onClick={() => {
+                    const m = parseFloat(nguMantissaInput);
+                    const ex = parseInt(nguExponentInput, 10);
+                    if (!Number.isFinite(m) || !Number.isFinite(ex)) return;
+                    onNguSetValue(bnNorm(m, ex));
+                  }}
+                  className="px-4 py-2 rounded border-2 border-fuchsia-300 bg-fuchsia-500 text-white text-xs font-bold cursor-pointer hover:bg-fuchsia-400"
+                >
+                  Set
+                </button>
+              </div>
+              <div className="flex gap-2 flex-wrap mb-3">
+                {[
+                  { label: '10 (×2)', m: 1, e: 1 },
+                  { label: '500 (×4)', m: 5, e: 2 },
+                  { label: '1e18', m: 1, e: 18 },
+                  { label: '1e100', m: 1, e: 100 },
+                  { label: '1e1000', m: 1, e: 1000 },
+                ].map(({ label, m, e }) => (
+                  <QuickButton key={label} label={label} onClick={() => onNguSetValue(bnNorm(m, e))} />
+                ))}
+              </div>
+
+              <div className="text-xs font-bold text-fuchsia-200 mb-1">Set growth multiplier</div>
+              <div className="flex gap-2 flex-wrap">
+                {TIERS.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => onNguSetTier(t.id)}
+                    className={`px-3 py-1.5 rounded text-xs font-bold cursor-pointer border-2 transition-all ${
+                      t.id === nguTier
+                        ? 'border-cyan-300 bg-cyan-500 text-white'
+                        : 'border-fuchsia-300/60 bg-black/30 text-fuchsia-100 hover:bg-fuchsia-500/30'
+                    }`}
+                  >
+                    {t.label}/sec
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-fuchsia-200/60 mt-2">
+                Heads up: an absurd value here lands on the public Numbers leaderboard.
               </p>
             </Section>
 
